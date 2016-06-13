@@ -371,6 +371,8 @@ def classify_one():
 
     image = None
     predictions = []
+    prototxt    = model_job.train_task().get_network_desc()
+
     if inputs is not None and len(inputs['data']) == 1:
         image = utils.image.embed_image_html(inputs['data'][0])
         # convert to class probabilities for viewing
@@ -398,6 +400,7 @@ def classify_one():
                 image_src       = image,
                 predictions     = predictions,
                 visualizations  = visualizations,
+                prototxt        = prototxt,
                 total_parameters= sum(v['param_count'] for v in visualizations if v['vis_type'] == 'Weights'),
                 ), status_code
 

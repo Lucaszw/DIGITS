@@ -9,6 +9,11 @@
 {% block job_content %}
 
 <script src="{{ url_for('static', filename='js/jquery.elevateZoom.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/underscore.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/treeData.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dnnTree.js') }}"></script>
+
+
 
 <div class="page-header">
     <h1>
@@ -47,11 +52,19 @@
 
 {% block job_content_details %}
 
+<style>
+.node {cursor: pointer;}
+.overlay{background-color:#EEE;}
+</style>
+
+
+
 <script type="text/javascript">
+    var charts = new Object();
     function drawHistogram(id, data) {
-        c3.generate({
+        charts[id] = c3.generate({
             bindto: id,
-            size: {height: 200},
+            size: {height: 200,width:200},
             data: {
                 columns: [
                     ['Count'].concat(data[0]),
@@ -83,68 +96,95 @@
             legend: {hide: true},
         });
     }
+
 </script>
 <style>
-    div.histogram .c3-axis-y .tick {
-        display: none;
-    }
+    div.histogram .c3-axis-y .tick {display: none;}
 </style>
 
 {% if visualizations %}
-<table class="table">
-    <tr>
-        <th>Description</th>
-        <th width="20%">Statistics</th>
-        <th>Visualization</th>
-    </tr>
-    {% for vis in visualizations %}
-    <tr>
-        <td>
-            <h3>{{vis['name']}}</h3>
-            <p>
-            {{vis['vis_type']}}
-            {% if 'layer_type' in vis %}
-            <small><i>({{vis['layer_type']}} layer)</i></small>
-            {% endif %}
-            </p>
-            {% if 'param_count' in vis %}
-            <p>
-            {{'{:,}'.format(vis['param_count'])}} learned parameters
-            </p>
-            {% endif %}
-        </td>
-        <td>
-            <b>Data shape:</b> {{vis['data_stats']['shape']}}<br>
-            <b>Mean:</b> {{vis['data_stats']['mean']}}<br>
-            <b>Std deviation:</b> {{vis['data_stats']['stddev']}}<br>
-            <div id="histogram-{{loop.index}}" class="histogram"></div>
-            <script>
-                drawHistogram("#histogram-{{loop.index}}", {{vis['data_stats']['histogram']}});
-            </script>
-        </td>
-        <td>
-            {% if vis['image_html'] %}
-            <img style="max-width:100%" src="{{vis['image_html']}}" id="vis_{{ loop.index }}" />
-             <script>
-                $('#vis_{{ loop.index }}').elevateZoom({zoomType: "inner", cursor: "crosshair",
-                        zoomWindowFadeIn: 500, zoomWindowFadeOut: 750,
-                        scrollZoom: true, scrollZoomIncrement: 0.025});
-            </script>
-            {% else %}
-            <i>Not shown</i>
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-    <tr>
-        <td><i>Totals</i></td>
-        <td>
-            <b>Total learned parameters:</b>
-            {{'{:,}'.format(total_parameters)}}
-        </td>
-    </tr>
-</table>
+
+<script>
+  $(document).ready(function(){
+    getTreeData('string','{{prototxt|tojson}}');
+    loadTree();
+     document.addEventListener("LayerClicked", function(e){
+       // When a layer is clicked show panels with the same layer name
+       // if no panels with that layer name exist, show all panels with same
+       // top attribute
+       var layer = e.layer;
+       var panels = $(".row-"+layer.name.replace("/","-"));
+       if (panels.length < 1){
+         panels = $(".row-"+layer.top.replace("/","-").toLowerCase());
+       }
+       $(".row-vis").css("display","none");
+       panels.css("display","block");
+     });
+  });
+</script>
+
+<div class="row">
+  <div class="col-sm-6">
+    <div id="tree-container"></div>
+  </div>
+  <div class="col-sm-6" style="display:inline-block;">
+    <table class="table">
+        <tr>
+            <td><i>Totals</i></td>
+            <td>
+                <b>Total learned parameters:</b>
+                {{'{:,}'.format(total_parameters)}}
+            </td>
+        </tr>
+        {% for vis in visualizations %}
+        <div class="row-vis row-{{vis['name'].replace('/','-')}}" style="width:50%;float:left;display:none;">
+          <div class="panel panel-default text-center" style="margin:1px;">
+            <div>
+                <h3>{{vis['name']}}</h3>
+
+                <p>
+                {{vis['vis_type']}}
+                {% if 'layer_type' in vis %}
+                <small><i>({{vis['layer_type']}} layer)</i></small>
+                {% endif %}
+                </p>
+
+                <p style="height:20px;">
+                {% if 'param_count' in vis %}
+                {{'{:,}'.format(vis['param_count'])}} learned parameters
+                {% endif %}
+                </p>
+
+            </div>
+            <div style="margin: 0 auto;min-height:200px;line-height:200px;">
+                {% if vis['image_html'] %}
+                <img style="width:200px;height:200px;" src="{{vis['image_html']}}" id="vis_{{ loop.index }}" />
+                 <script>
+                    $('#vis_{{ loop.index }}').elevateZoom({zoomType: "inner", cursor: "crosshair",
+                            zoomWindowFadeIn: 500, zoomWindowFadeOut: 750,
+                            scrollZoom: true, scrollZoomIncrement: 0.025});
+                </script>
+                {% else %}
+                <i>Not shown</i>
+                {% endif %}
+            </div>
+            <div>
+                <b>Data shape:</b> {{vis['data_stats']['shape']}}<br>
+                <b>Mean:</b> {{vis['data_stats']['mean']}}<br>
+                <b>Std deviation:</b> {{vis['data_stats']['stddev']}}<br>
+                <div id="histogram-{{loop.index}}" class="histogram"></div>
+                <script>
+                    drawHistogram("#histogram-{{loop.index}}", {{vis['data_stats']['histogram']}});
+                </script>
+            </div>
+          </div>
+        </div>
+
+        {% endfor %}
+    </table>
+  </div>
+</div>
+
 {% endif %}
 
 {% endblock %}
-
