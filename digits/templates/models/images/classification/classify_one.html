@@ -137,9 +137,9 @@
     getTreeData('string','{{prototxt|tojson}}');
     loadTree(400);
 
-     document.addEventListener("LayerClicked", function(e){
-       // When a layer is clicked show panels with the same layer name or top
-       showLayer(e.layer)
+    document.addEventListener("LayerClicked", function(e){
+      // When a layer is clicked show panels with the same layer name or top
+      showLayer(e.layer)
     });
 
     showLayer(_.filter(layers,function(d){return d.type == "Data"})[0]);
