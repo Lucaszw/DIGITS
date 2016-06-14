@@ -105,26 +105,52 @@
 {% if visualizations %}
 
 <script>
+  function showLayer(layer){
+    var name   = layer.name.replace("/","-");
+
+    var container = d3.select("#layer-info")
+     .style("text-align","center")
+     .style("height","100px")
+     .style("overflow-y","hidden")
+     .html("");
+
+     container.append("b").html(layer.name + " , " + layer.type);
+     container.append("div")
+      .attr("class","well")
+      .style("height","70px")
+      .style("overflow-y","auto")
+      .html(layer.def);
+
+      var panels = $(".row-"+name);
+      if (panels.length < 1){
+        name   = layer.top.replace("/","-").toLowerCase();
+        panels = $(".row-"+name);
+      }
+      $(".row-vis").css("display","none");
+      panels.css("display","block");
+      $(".h3-vis").css("display","none");
+      $(".h3-"+name+":first").css("display","block");
+
+  }
+
   $(document).ready(function(){
     getTreeData('string','{{prototxt|tojson}}');
-    loadTree();
+    loadTree(400);
+
      document.addEventListener("LayerClicked", function(e){
-       // When a layer is clicked show panels with the same layer name
-       // if no panels with that layer name exist, show all panels with same
-       // top attribute
-       var layer = e.layer;
-       var panels = $(".row-"+layer.name.replace("/","-"));
-       if (panels.length < 1){
-         panels = $(".row-"+layer.top.replace("/","-").toLowerCase());
-       }
-       $(".row-vis").css("display","none");
-       panels.css("display","block");
-     });
+       // When a layer is clicked show panels with the same layer name or top
+       showLayer(e.layer)
+    });
+
+    showLayer(_.filter(layers,function(d){return d.type == "Data"})[0]);
+
   });
 </script>
 
 <div class="row">
   <div class="col-sm-6">
+    <div id = "layer-info" class="panel panel-default">
+    </div>
     <div id="tree-container"></div>
   </div>
   <div class="col-sm-6" style="display:inline-block;">
@@ -137,11 +163,13 @@
             </td>
         </tr>
         {% for vis in visualizations %}
-        <div class="row-vis row-{{vis['name'].replace('/','-')}}" style="width:50%;float:left;display:none;">
+        {% set h3Class  = "h3-vis h3-"+vis['name'].replace('/','-') %}
+        {% set rowClass = "row-vis row-"+vis['name'].replace('/','-') %}
+
+        <!-- <h3 class="{{h3Class}}" style="display:none;">{{vis['name']}}</h3> -->
+        <div class="{{rowClass}}" style="width:50%;float:left;display:none;">
           <div class="panel panel-default text-center" style="margin:1px;">
             <div>
-                <h3>{{vis['name']}}</h3>
-
                 <p>
                 {{vis['vis_type']}}
                 {% if 'layer_type' in vis %}

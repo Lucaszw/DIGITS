@@ -1,5 +1,5 @@
-function loadTree(){
-
+function loadTree(height){
+  var height = _.isUndefined(height) ? 600 : height;
   var COLORS = ["#72bee3","#f47a81","#71cdbd","#f89532","#c98fc4","#729acb","#a4de5c","#dfc000","#ed8cc3","#a084ff", "#7CD598", "#82C2FF"];
   var types  =_.uniq(_.map(window.layers,"type"));
 
@@ -20,7 +20,7 @@ function loadTree(){
 
   // size of the diagram
   var viewerWidth = $("#tree-container").width();
-  var viewerHeight = 600;
+  var viewerHeight = height;
 
   var tree = d3.layout.tree()
       .size([viewerHeight, viewerWidth]);

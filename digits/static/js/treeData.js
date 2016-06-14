@@ -72,8 +72,6 @@ function getTreeData(type,text){
     }
   );
 
-  console.log(unformattedLayerBlob);
-
   // Convert to array of Objects/Dict
   window.layers = _.map(unformattedLayerBlob, function(l,i){
     return {
@@ -81,7 +79,8 @@ function getTreeData(type,text){
       top: getAttr(l,"top:"),
       bottom: getAttr(l,"bottom:"),
       type: getAttr(l,"type:"),
-      tops: getTops(l)
+      tops: getTops(l),
+      def: l.join("\n")
     }
   });
 
