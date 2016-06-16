@@ -10,6 +10,7 @@
 
 <script src="{{ url_for('static', filename='js/jquery.elevateZoom.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/underscore.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chroma.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/treeData.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dnnTree.js') }}"></script>
 
@@ -105,6 +106,70 @@
 {% if visualizations %}
 
 <script>
+
+  function drawAlphaKernel(container,data){
+    var h = w = 50;
+    var grid_dim = Math.floor(Math.sqrt(data[0][0][0].length));
+    var pixel_h = h/grid_dim;
+    var pixel_w = w/grid_dim;
+
+    var colormap = chroma.scale(['#541E8A','#3F84FE','#87BCFF','#4BD29F','#9AFFA2','#F3AC5A','#FF0000']).colors(255);
+    // var colormap = chroma.scale(['#3277FF','#00B2FF','#1FDA9A','#FFE7A3','#DB3340']).colors(255);
+
+    var neurons = _.flatten(_.flatten(data,true),true);
+
+    _.each(neurons,function(n){
+      var neuron = container.append("canvas")
+        .attr({height:h, width:w, class: "panel panel-default"})
+        .style({margin: "0px",height:h+"px", width:w+"px"});
+
+      var ctx = neuron.node().getContext("2d");
+
+      _.each(_.range(0,grid_dim),function(i){
+        _.each(_.range(0,grid_dim),function(j){
+          var x = j*pixel_w;
+          var y = i*pixel_h;
+
+          var c = 255*(Math.tanh(2*n[Math.floor(j)*grid_dim + i]));
+          var rgb = colormap[Math.floor(c)];
+
+          ctx.fillStyle = rgb;
+          ctx.fillRect(x,y,pixel_w,pixel_h);
+        });
+      });
+    });
+  }
+
+  function drawRGBKernel(container,data){
+    var h = w = 50;
+    var pixel_h = h/data[0].length;
+    var pixel_w = w/data[0][0].length;
+
+    _.each(data,function(item){
+      var neuron = container.append("canvas")
+        .attr({height:h, width:w})
+        .attr("class","panel panel-default")
+        .style({margin: "0px"})
+        .style({height:h+"px", width:w+"px"});
+
+      var ctx = neuron.node().getContext("2d");
+
+      _.each(item,function(row,i){
+          _.each(row,function(__,j){
+            // Get Channels in RGB form ( 0 -> 255)
+            var rgb = "rgb("+_.map(item[i][j],function(n){
+              return Math.floor(n*255)
+            }).join()+")";
+            var x = j*pixel_w;
+            var y = i*pixel_h;
+            ctx.fillStyle = rgb;
+            ctx.fillRect(x,y,pixel_w,pixel_h);
+          });
+      });
+    });
+  }
+
+
   function showLayer(layer){
     var name   = layer.name.replace("/","-");
 
@@ -131,26 +196,56 @@
       $(".h3-vis").css("display","none");
       $(".h3-"+name+":first").css("display","block");
 
+      // d3.json(base_url+"send_params")
+      //     .post(JSON.stringify({
+      //       image: {{image_data.tolist()}}
+      //     }),
+      //     function(error, data) {
+      //       console.log(data);
+      //     });
+
+
+      d3.json(base_url+"visualize_features?job_id="+"{{request.args['job_id']}}")
+        .post(JSON.stringify({
+          layer_name: layer.name,
+          image: {{image_data.tolist()}}
+        }),
+        function(error, json) {
+          window.data = json;
+
+          var container = d3.select("#layer-container")
+            .html('')
+            .style("line-height","1px")
+            .style({height:"400px", width:"100%", background: "#f9f9f9", overflow: "auto"});
+
+          if (json.weights[0][0][0].length == 3){
+            drawRGBKernel(container,json.weights);
+          }else {
+            drawAlphaKernel(container,json.weights);
+          }
+      });
+
   }
 
   $(document).ready(function(){
     getTreeData('string','{{prototxt|tojson}}');
     loadTree(400);
-
     document.addEventListener("LayerClicked", function(e){
       // When a layer is clicked show panels with the same layer name or top
       showLayer(e.layer)
     });
-
+    window.base_url = "http://localhost:5000/models/images/classification/";
     showLayer(_.filter(layers,function(d){return d.type == "Data"})[0]);
+    console.log({{image_data.tolist()}});
 
   });
 </script>
 
 <div class="row">
   <div class="col-sm-6">
-    <div id = "layer-info" class="panel panel-default">
-    </div>
+    <div id = "layer-info" class="panel panel-default"></div>
+    <div id = "layer-container"></div>
+    <br />
     <div id="tree-container"></div>
   </div>
   <div class="col-sm-6" style="display:inline-block;">
@@ -163,6 +258,7 @@
             </td>
         </tr>
         {% for vis in visualizations %}
+
         {% set h3Class  = "h3-vis h3-"+vis['name'].replace('/','-') %}
         {% set rowClass = "row-vis row-"+vis['name'].replace('/','-') %}
 
@@ -188,6 +284,7 @@
                 {% if vis['image_html'] %}
                 <img style="width:200px;height:200px;" src="{{vis['image_html']}}" id="vis_{{ loop.index }}" />
                  <script>
+
                     $('#vis_{{ loop.index }}').elevateZoom({zoomType: "inner", cursor: "crosshair",
                             zoomWindowFadeIn: 500, zoomWindowFadeOut: 750,
                             scrollZoom: true, scrollZoomIncrement: 0.025});

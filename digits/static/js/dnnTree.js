@@ -1,4 +1,4 @@
-function loadTree(height){
+function loadTree(selector,height){
   var height = _.isUndefined(height) ? 600 : height;
   var COLORS = ["#72bee3","#f47a81","#71cdbd","#f89532","#c98fc4","#729acb","#a4de5c","#dfc000","#ed8cc3","#a084ff", "#7CD598", "#82C2FF"];
   var types  =_.uniq(_.map(window.layers,"type"));
@@ -19,8 +19,8 @@ function loadTree(height){
   var root;
 
   // size of the diagram
-  var viewerWidth = $("#tree-container").width();
-  var viewerHeight = height;
+  var viewerWidth = 10000000;
+  var viewerHeight = 10000;
 
   var tree = d3.layout.tree()
       .size([viewerHeight, viewerWidth]);
@@ -110,7 +110,7 @@ function loadTree(height){
 
 
   // define the baseSvg, attaching a class for styling and the zoomListener
-  var baseSvg = d3.select("#tree-container").append("svg")
+  var baseSvg = d3.select(selector).append("svg")
       .attr("width", viewerWidth)
       .attr("height", viewerHeight)
       .attr("class", "overlay")
@@ -142,7 +142,7 @@ function loadTree(height){
 
       x = -source.y0;
       y = -source.x0;
-      y = y * scale + viewerHeight / 2;
+      y = y * scale+height;
       d3.select('g').transition()
           .duration(duration)
           .attr("transform", "translate(" + x + "," + y + ")scale(" + scale + ")");

@@ -156,6 +156,7 @@ class InferenceTask(Task):
                     vis = layer[...]
                     if vis.shape[0] > 0:
                         visualization['image_html'] = embed_image_html(vis)
+                        visualization['data'] = vis
                     visualizations.append(visualization)
                 # sort by layer ID (as HDF5 ASCII sorts)
                 visualizations = sorted(visualizations,key=lambda x:x['id'])

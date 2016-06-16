@@ -5,7 +5,6 @@ import os
 import random
 import re
 import tempfile
-
 import flask
 import numpy as np
 import werkzeug.exceptions
@@ -311,6 +310,91 @@ def large_graph():
 
     return flask.render_template('models/images/classification/large_graph.html', job=job)
 
+
+@blueprint.route('/layer_visualizations', methods=['POST', 'GET'])
+def layer_visualizations():
+    # job_id=20160613-133912-115d
+
+    model_job = job_from_request()
+    net       = model_job.train_task().get_net(None,0)
+    prototxt  = model_job.train_task().get_network_desc()
+
+    return flask.render_template('models/images/classification/layer_visualizations.html',
+            model_job       = model_job,
+            prototxt        = prototxt,
+            )
+
+@blueprint.route('/visualize_features.json', methods=['POST', 'GET'])
+@blueprint.route('/visualize_features',  methods=['POST', 'GET'])
+def visualize_features():
+    """
+    Returns grid of images for a given layer and image
+    """
+    # TODO: Should not just default GPU to 0, and epoch to None
+    # flask.request.args[key]
+
+    # Get Data for this layer:
+    request_data = flask.json.loads(flask.request.data)
+    image = request_data['image']
+
+    model_job = job_from_request()
+    net = model_job.train_task().get_net(None,0)
+    weights     = net.params[request_data['layer_name']][0].data.transpose(0, 2, 3, 1)
+    # Normalize the data:
+    weights = (weights - weights.min()) / (weights.max() - weights.min())
+    return flask.jsonify({'weights': weights.tolist()})
+
+@blueprint.route('/send_params.json', methods=['POST', 'GET'])
+@blueprint.route('/send_params',  methods=['POST', 'GET'])
+def send_params():
+    model_job = job_from_request()
+    image      = None
+    epoch      = None
+    layers     = 'all'
+
+    # Store image file temporarily:
+    outfile = tempfile.mkstemp(suffix='.png')
+    flask.request.files['image_file'].save(outfile[1])
+    image_path = outfile[1]
+    os.close(outfile[0])
+    remove_image_path = True
+
+    # create inference job
+    inference_job = ImageInferenceJob(
+                username    = utils.auth.get_username(),
+                name        = "Classify One Image",
+                model       = model_job,
+                images      = [image_path],
+                epoch       = epoch,
+                layers      = layers
+                )
+
+    # schedule tasks
+    scheduler.add_job(inference_job)
+    # wait for job to complete
+    inference_job.wait_completion()
+    # retrieve inference data
+    inputs, outputs, visualizations = inference_job.get_data()
+
+    # delete job
+    scheduler.delete_job(inference_job)
+
+    if remove_image_path:
+        os.remove(image_path)
+
+
+    formatted_data = []
+    for v in visualizations:
+        try:
+            print "V:"
+            print v['name']
+            formatted_data.append({'name': v['name'], 'vis_type': v['vis_type'], 'data': v['data'].tolist()})
+        except:
+            print "error!"
+
+    return flask.jsonify({'data': formatted_data})
+    # return flask.jsonify({'args': flask.json.loads(flask.request.data)})
+
 @blueprint.route('/classify_one.json', methods=['POST'])
 @blueprint.route('/classify_one', methods=['POST', 'GET'])
 def classify_one():
@@ -322,6 +406,7 @@ def classify_one():
     model_job = job_from_request()
 
     remove_image_path = False
+    image      = None
     if 'image_path' in flask.request.form and flask.request.form['image_path']:
         image_path = flask.request.form['image_path']
     elif 'image_file' in flask.request.files and flask.request.files['image_file']:
@@ -369,12 +454,13 @@ def classify_one():
     if remove_image_path:
         os.remove(image_path)
 
-    image = None
     predictions = []
     prototxt    = model_job.train_task().get_network_desc()
 
+
     if inputs is not None and len(inputs['data']) == 1:
         image = utils.image.embed_image_html(inputs['data'][0])
+
         # convert to class probabilities for viewing
         last_output_name, last_output_data = outputs.items()[-1]
 
@@ -391,6 +477,7 @@ def classify_one():
                     predictions.append( (labels[i], scores[i]) )
             predictions = [(p[0], round(100.0*p[1],2)) for p in predictions[:5]]
 
+
     if request_wants_json():
         return flask.jsonify({'predictions': predictions}), status_code
     else:
@@ -398,6 +485,7 @@ def classify_one():
                 model_job       = model_job,
                 job             = inference_job,
                 image_src       = image,
+                image_data      = inputs['data'][0],
                 predictions     = predictions,
                 visualizations  = visualizations,
                 prototxt        = prototxt,
@@ -689,4 +777,3 @@ def get_previous_network_snapshots():
             e.insert(0, (-1, 'Previous pretrained model'))
         prev_network_snapshots.append(e)
     return prev_network_snapshots
-

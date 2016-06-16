@@ -1,0 +1,137 @@
+{# Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved. #}
+{% extends "layout.html" %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/underscore.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chroma.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/treeData.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dnnTree.js') }}"></script>
+<script src="{{ url_for('static', filename='js/jquery.form.min.js') }}"></script>
+{% endblock %}
+
+
+{% block nav %}
+<li><a href="{{url_for('digits.model.views.show', job_id=model_job.id())}}">{{model_job.name()}}</a></li>
+<li class="active"><a>Layer Visualizations</a></li>
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+body , html, .container, .row {
+  height: 100%;
+}
+
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+
+
+@media (max-width: 768px){
+  body {padding-top:250px;}
+}
+</style>
+
+<script>
+
+  window.prototxt = {{prototxt|tojson}};
+  window.job_id   = '{{model_job.id()}}';
+  window.base_url = "http://localhost:5000/models/images/classification/";
+
+
+  $(document).ready(function(){
+
+    var navigation = d3.select("#navigation")
+      .style({width: "200px", height: "100%",float: "left"})
+      .append("div")
+        .attr("class", "panel panel-default text-center")
+        .style("height", "100%");
+
+
+
+
+    navigation.append("img")
+      .attr({id: "myImg",src: "#", class: "panel panel-default"})
+      .style({width: "180px", "margin-left": "10px", "max-height": "200px", display: "none"});
+
+    var inputContainer = navigation.append("span")
+      .attr("class","btn btn-sm btn-primary btn-file");
+
+    inputContainer.append("label")
+      .style("margin-bottom","0px")
+      .attr("for","image_file")
+      .html("Select Image");
+
+    inputContainer.append("input").attr({type: "file", name: "image_file"});
+
+
+
+
+    var treeContainer = d3.select('#treeLayout')
+      .style({"margin-left": "210px", height: "100%"})
+      .append("div")
+        .attr("class", "panel panel-default")
+        .style({"height": "100%", overflow: "hidden", background: "#F2F2F2"});
+
+    getTreeData('string','{{prototxt|tojson}}');
+    loadTree('#treeLayout .panel',$(treeContainer.node()).height()/2);
+
+
+    $(function () {
+        $(":file").change(function () {
+            if (this.files && this.files[0]) {
+                var reader = new FileReader();
+                reader.onload = imageIsLoaded;
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    });
+
+
+    function imageIsLoaded(e) {
+      d3.select("#myImg")
+        .attr("src", e.target.result)
+        .style("display","block");
+
+      $('#navigation').ajaxForm();
+      $('#navigation').ajaxSubmit({
+        url: window.base_url+"send_params?job_id={{model_job.id()}}",
+        success: function(json){
+          console.log("Success!");
+          window.data = json.data;
+        }
+      });
+
+    };
+
+  });
+
+
+</script>
+
+  <div class="row" style="display:inline;">
+    <form id="navigation" name="navigation" method="post" enctype="multipart/form-data"></form>
+
+    <div id="treeLayout"></div>
+    <div style="clear: both;"></div>
+  </div>
+
+
+{% endblock %}
