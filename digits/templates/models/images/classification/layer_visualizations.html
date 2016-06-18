@@ -6,6 +6,7 @@
 <script src="{{ url_for('static', filename='js/chroma.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/treeData.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dnnTree.js') }}"></script>
+<script src="{{ url_for('static', filename='js/layer_visualization.js') }}"></script>
 <script src="{{ url_for('static', filename='js/jquery.form.min.js') }}"></script>
 {% endblock %}
 
@@ -55,17 +56,35 @@ body , html, .container, .row {
   window.job_id   = '{{model_job.id()}}';
   window.base_url = "http://localhost:5000/models/images/classification/";
 
+  function showUploader(){
+    d3.select("#selectModelLayout").style("display","block");
+  }
+
+  function imageIsLoaded(e) {
+    d3.select("#myImg")
+      .attr("src", e.target.result)
+      .style("display","block");
+
+    $('#navigation').ajaxForm();
+    $('#navigation').ajaxSubmit({
+      url: window.base_url+"send_params?job_id={{model_job.id()}}",
+      success: function(json){
+        window.outputs_data = json.data;
+        console.log("Outputs Loaded!");
+      }
+    });
+
+  };
+
 
   $(document).ready(function(){
+
 
     var navigation = d3.select("#navigation")
       .style({width: "200px", height: "100%",float: "left"})
       .append("div")
         .attr("class", "panel panel-default text-center")
-        .style("height", "100%");
-
-
-
+        .style({"padding-top": "10px", height: "100%"});
 
     navigation.append("img")
       .attr({id: "myImg",src: "#", class: "panel panel-default"})
@@ -74,52 +93,29 @@ body , html, .container, .row {
     var inputContainer = navigation.append("span")
       .attr("class","btn btn-sm btn-primary btn-file");
 
+    navigation.append("a")
+      .attr("class","btn btn-default btn-sm")
+      .style({position: "relative", top: "10px"})
+      .on("click", showUploader)
+      .html("Upload Pre-Trained Model");
+
     inputContainer.append("label")
       .style("margin-bottom","0px")
       .attr("for","image_file")
       .html("Select Image");
 
-    inputContainer.append("input").attr({type: "file", name: "image_file"});
-
-
-
-
-    var treeContainer = d3.select('#treeLayout')
-      .style({"margin-left": "210px", height: "100%"})
-      .append("div")
-        .attr("class", "panel panel-default")
-        .style({"height": "100%", overflow: "hidden", background: "#F2F2F2"});
-
-    getTreeData('string','{{prototxt|tojson}}');
-    loadTree('#treeLayout .panel',$(treeContainer.node()).height()/2);
-
-
-    $(function () {
-        $(":file").change(function () {
-            if (this.files && this.files[0]) {
-                var reader = new FileReader();
-                reader.onload = imageIsLoaded;
-                reader.readAsDataURL(this.files[0]);
-            }
-        });
-    });
-
-
-    function imageIsLoaded(e) {
-      d3.select("#myImg")
-        .attr("src", e.target.result)
-        .style("display","block");
-
-      $('#navigation').ajaxForm();
-      $('#navigation').ajaxSubmit({
-        url: window.base_url+"send_params?job_id={{model_job.id()}}",
-        success: function(json){
-          console.log("Success!");
-          window.data = json.data;
+    inputContainer.append("input")
+      .attr({type: "file", name: "image_file"})
+      .on("change", function(){
+        if (this.files && this.files[0]) {
+            var reader = new FileReader();
+            reader.onload = imageIsLoaded;
+            reader.readAsDataURL(this.files[0]);
         }
       });
 
-    };
+
+    init_vis('{{prototxt|tojson}}');
 
   });
 
@@ -128,8 +124,9 @@ body , html, .container, .row {
 
   <div class="row" style="display:inline;">
     <form id="navigation" name="navigation" method="post" enctype="multipart/form-data"></form>
-
     <div id="treeLayout"></div>
+    <div id="layerLayout"></div>
+    <form id="selectModelLayout" name="selectModel" method="post" enctype="multipart/form-data"></form>
     <div style="clear: both;"></div>
   </div>
 

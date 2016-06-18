@@ -229,11 +229,14 @@
 
   $(document).ready(function(){
     getTreeData('string','{{prototxt|tojson}}');
-    loadTree(400);
+    loadTree('#tree-container',400);
+    // loadTree('#treeLayout .panel',$(treeContainer.node()).height()/2);
+
     document.addEventListener("LayerClicked", function(e){
       // When a layer is clicked show panels with the same layer name or top
       showLayer(e.layer)
     });
+
     window.base_url = "http://localhost:5000/models/images/classification/";
     showLayer(_.filter(layers,function(d){return d.type == "Data"})[0]);
     console.log({{image_data.tolist()}});

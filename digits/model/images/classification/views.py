@@ -344,6 +344,40 @@ def visualize_features():
     weights = (weights - weights.min()) / (weights.max() - weights.min())
     return flask.jsonify({'weights': weights.tolist()})
 
+
+
+@blueprint.route('/run_model.json', methods=['POST', 'GET'])
+@blueprint.route('/run_model',  methods=['POST', 'GET'])
+def run_model():
+    """
+    Load a pre-trained model for forward pass, or de-conv tasks
+    """
+
+    prototxt = tempfile.mkstemp(suffix='.prototxt')
+    flask.request.files['prototxt'].save(prototxt[1])
+    prototxt_path = prototxt[1]
+    os.close(prototxt[0])
+
+
+    caffemodel = tempfile.mkstemp(suffix='.caffemodel')
+    flask.request.files['weights'].save(caffemodel[1])
+    caffemodel_path = caffemodel[1]
+    os.close(caffemodel[0])
+
+
+    mean = tempfile.mkstemp(suffix='.npy')
+    flask.request.files['mean'].save(mean[1])
+    mean_path = mean[1]
+    os.close(mean[0])
+
+    return flask.jsonify({'data': {
+        "prototxt": prototxt_path,
+        "caffemodel": caffemodel_path,
+        "mean": mean_path
+        }
+    });
+
+
 @blueprint.route('/send_params.json', methods=['POST', 'GET'])
 @blueprint.route('/send_params',  methods=['POST', 'GET'])
 def send_params():

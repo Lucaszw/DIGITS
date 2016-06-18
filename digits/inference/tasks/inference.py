@@ -133,6 +133,7 @@ class InferenceTask(Task):
 
             # collect layer data, if applicable
             if 'layers' in db.keys():
+                vis_datasets = db['vis'].items()
                 for layer_id, layer in db['layers'].items():
                     visualization = {
                         'id': int(layer_id),
@@ -155,9 +156,13 @@ class InferenceTask(Task):
                         visualization['layer_type'] = layer.attrs['layer_type']
                     vis = layer[...]
                     if vis.shape[0] > 0:
+
+                        layer_data = [t for t in vis_datasets if t[0] == layer_id][0][1][...]
                         visualization['image_html'] = embed_image_html(vis)
-                        visualization['data'] = vis
+                        visualization['data'] = layer_data
+
                     visualizations.append(visualization)
+
                 # sort by layer ID (as HDF5 ASCII sorts)
                 visualizations = sorted(visualizations,key=lambda x:x['id'])
             db.close()
@@ -214,5 +219,3 @@ class InferenceTask(Task):
             args.append('--db')
 
         return args
-
-

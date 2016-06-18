@@ -47,6 +47,12 @@ class CaffeTrainSanityCheckError(Error):
     pass
 
 @subclass
+class CaffeFeatureVisualization(TrainTask):
+    """ Load Pretrained Model For Visualization """
+    def get_model():
+        print "GETTING MODEL!"
+
+@subclass
 class CaffeTrainTask(TrainTask):
     """
     Trains a caffe model
@@ -1133,12 +1139,20 @@ class CaffeTrainTask(TrainTask):
                             vis = utils.image.get_layer_vis_square(data,
                                     allow_heatmap=bool(bottom != 'data'),
                                     channel_order = 'BGR')
+                            vis_data = utils.image.reshape_data_for_vis(data,'BGR')
+
+                            # print "ACTIVATIONS:"
+                            # print str(bottom)
+                            # print vis_data.shape
+
+
                             mean, std, hist = self.get_layer_statistics(data)
                             visualizations.append(
                                     {
                                         'name': str(bottom),
                                         'vis_type': 'Activation',
                                         'vis': vis,
+                                        'data': utils.image.normalize_data(vis_data),
                                         'data_stats': {
                                             'shape': data.shape,
                                             'mean': mean,
@@ -1152,8 +1166,15 @@ class CaffeTrainTask(TrainTask):
                         data = net.params[layer.name][0].data
                         if layer.type not in ['InnerProduct']:
                             vis = utils.image.get_layer_vis_square(data, channel_order = 'BGR')
+                            vis_data = utils.image.reshape_data_for_vis(data,'BGR')
                         else:
                             vis = None
+                            vis_data = None
+
+                        # print "WEIGHTS:"
+                        # print str(layer.name)
+                        # print vis_data.shape
+
                         mean, std, hist = self.get_layer_statistics(data)
                         params = net.params[layer.name]
                         weight_count = reduce(operator.mul, params[0].data.shape, 1)
@@ -1162,6 +1183,7 @@ class CaffeTrainTask(TrainTask):
                         else:
                             bias_count = 0
                         parameter_count = weight_count + bias_count
+
                         visualizations.append(
                                 {
                                     'name': str(layer.name),
@@ -1169,6 +1191,7 @@ class CaffeTrainTask(TrainTask):
                                     'layer_type': layer.type,
                                     'param_count': parameter_count,
                                     'vis': vis,
+                                    'data': utils.image.normalize_data(vis_data),
                                     'data_stats': {
                                         'shape': data.shape,
                                         'mean': mean,
@@ -1188,12 +1211,20 @@ class CaffeTrainTask(TrainTask):
                                     normalize = normalize,
                                     allow_heatmap = bool(top != 'data'),
                                     channel_order = 'BGR')
+                            vis_data = utils.image.reshape_data_for_vis(data,'BGR')
+
+                            # print "ACTIVATIONS:"
+                            # print str(top)
+                            # print vis_data.shape
+
+
                             mean, std, hist = self.get_layer_statistics(data)
                             visualizations.append(
                                     {
                                         'name': str(top),
                                         'vis_type': 'Activation',
                                         'vis': vis,
+                                        'data': utils.image.normalize_data(vis_data),
                                         'data_stats': {
                                             'shape': data.shape,
                                             'mean': mean,
