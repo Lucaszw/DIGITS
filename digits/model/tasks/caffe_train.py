@@ -1141,11 +1141,6 @@ class CaffeTrainTask(TrainTask):
                                     channel_order = 'BGR')
                             vis_data = utils.image.reshape_data_for_vis(data,'BGR')
 
-                            # print "ACTIVATIONS:"
-                            # print str(bottom)
-                            # print vis_data.shape
-
-
                             mean, std, hist = self.get_layer_statistics(data)
                             visualizations.append(
                                     {
@@ -1170,10 +1165,6 @@ class CaffeTrainTask(TrainTask):
                         else:
                             vis = None
                             vis_data = None
-
-                        # print "WEIGHTS:"
-                        # print str(layer.name)
-                        # print vis_data.shape
 
                         mean, std, hist = self.get_layer_statistics(data)
                         params = net.params[layer.name]
@@ -1319,6 +1310,17 @@ class CaffeTrainTask(TrainTask):
         Returns True if there is a model that can be used
         """
         return len(self.snapshots) > 0
+
+    def get_caffemodel(self):
+        """
+        Returns location of .caffemodel for last epoch
+        """
+        return self.snapshots[-1][0]
+    def get_depoly_prototxt(self):
+        """
+        Returns location of deploy.prototxt
+        """
+        return self.path(self.deploy_file)
 
     def get_net(self, epoch=None, gpu=-1):
         """

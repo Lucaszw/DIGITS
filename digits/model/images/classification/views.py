@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import os
+from subprocess import call, Popen
 import random
 import re
 import tempfile
@@ -316,35 +317,14 @@ def layer_visualizations():
     # job_id=20160613-133912-115d
 
     model_job = job_from_request()
-    net       = model_job.train_task().get_net(None,0)
-    prototxt  = model_job.train_task().get_network_desc()
+    task = model_job.train_task()
+    net       = task.get_net(None,0)
+    prototxt  = open(task.path(task.deploy_file),'r').read()
 
     return flask.render_template('models/images/classification/layer_visualizations.html',
             model_job       = model_job,
-            prototxt        = prototxt,
+            prototxt        = prototxt
             )
-
-@blueprint.route('/visualize_features.json', methods=['POST', 'GET'])
-@blueprint.route('/visualize_features',  methods=['POST', 'GET'])
-def visualize_features():
-    """
-    Returns grid of images for a given layer and image
-    """
-    # TODO: Should not just default GPU to 0, and epoch to None
-    # flask.request.args[key]
-
-    # Get Data for this layer:
-    request_data = flask.json.loads(flask.request.data)
-    image = request_data['image']
-
-    model_job = job_from_request()
-    net = model_job.train_task().get_net(None,0)
-    weights     = net.params[request_data['layer_name']][0].data.transpose(0, 2, 3, 1)
-    # Normalize the data:
-    weights = (weights - weights.min()) / (weights.max() - weights.min())
-    return flask.jsonify({'weights': weights.tolist()})
-
-
 
 @blueprint.route('/run_model.json', methods=['POST', 'GET'])
 @blueprint.route('/run_model',  methods=['POST', 'GET'])
@@ -365,18 +345,51 @@ def run_model():
     os.close(caffemodel[0])
 
 
-    mean = tempfile.mkstemp(suffix='.npy')
-    flask.request.files['mean'].save(mean[1])
-    mean_path = mean[1]
-    os.close(mean[0])
+    # mean = tempfile.mkstemp(suffix='.npy')
+    # flask.request.files['mean'].save(mean[1])
+    # mean_path = mean[1]
+    # os.close(mean[0])
 
-    return flask.jsonify({'data': {
-        "prototxt": prototxt_path,
-        "caffemodel": caffemodel_path,
-        "mean": mean_path
-        }
-    });
 
+    call(["mv", prototxt_path, "digits/layer_outputs/deploy.prototxt"])
+    call(["mv", caffemodel_path, "digits/layer_outputs/model.caffemodel"])
+
+    prototxt = open("digits/layer_outputs/deploy.prototxt",'r').read()
+    return flask.jsonify({'data': {"prototxt": prototxt}})
+
+@blueprint.route('/get_single_layer.json', methods=['POST', 'GET'])
+@blueprint.route('/get_single_layer',  methods=['POST', 'GET'])
+def get_single_layer():
+    """
+    Return blob and param data for a single layer
+    """
+    # Get array of characters not allowed in filenames (to be removed)
+    delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
+
+    # Get filename containing numpy data for given layer
+    layer_name  = str(flask.request.args['layer_name'])
+
+    file_name  = layer_name.translate(None,delchars)+".npy"
+
+    # Get location that the output data is stored
+    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+
+    # Get location of filter output , and activation output
+    weights_path  = o+"params/" + file_name
+    activation_path  = o+"blobs/" + file_name
+
+    # Put weights and activations into an array
+    outputs = []
+    if os.path.exists(weights_path):
+        data = np.load(weights_path)
+        outputs.append({'name': layer_name, 'vis_type': 'Weights', 'data': data.tolist()})
+
+
+    if os.path.exists(activation_path):
+        data = np.load(activation_path)
+        outputs.append({'name': layer_name, 'vis_type': 'Activation', 'data': data.tolist()})
+
+    return flask.jsonify({'data': outputs})
 
 @blueprint.route('/send_params.json', methods=['POST', 'GET'])
 @blueprint.route('/send_params',  methods=['POST', 'GET'])
@@ -393,41 +406,39 @@ def send_params():
     os.close(outfile[0])
     remove_image_path = True
 
-    # create inference job
-    inference_job = ImageInferenceJob(
-                username    = utils.auth.get_username(),
-                name        = "Classify One Image",
-                model       = model_job,
-                images      = [image_path],
-                epoch       = epoch,
-                layers      = layers
-                )
+    pretrained = flask.request.args['load_default'] == 'false'
 
-    # schedule tasks
-    scheduler.add_job(inference_job)
-    # wait for job to complete
-    inference_job.wait_completion()
-    # retrieve inference data
-    inputs, outputs, visualizations = inference_job.get_data()
+    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+    if not pretrained:
+        caffemodel  = model_job.train_task().get_caffemodel()
+        prototxt    = model_job.train_task().get_depoly_prototxt()
+        p = Popen(["python", o+"generate_outputs.py", image_path, prototxt, caffemodel]);p.wait()
+    else:
+        p = Popen(["python", o+"generate_outputs.py", image_path, o+"deploy.prototxt", o+"model.caffemodel"]);p.wait()
 
-    # delete job
-    scheduler.delete_job(inference_job)
 
     if remove_image_path:
         os.remove(image_path)
 
+    delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
 
     formatted_data = []
-    for v in visualizations:
-        try:
-            print "V:"
-            print v['name']
-            formatted_data.append({'name': v['name'], 'vis_type': v['vis_type'], 'data': v['data'].tolist()})
-        except:
-            print "error!"
 
-    return flask.jsonify({'data': formatted_data})
-    # return flask.jsonify({'args': flask.json.loads(flask.request.data)})
+    net_params = np.load(o+"param_keys.npy")
+    net_blobs  = np.load(o+"blob_keys.npy")
+
+    for param in net_params:
+        path = o+"params/"+param.translate(None,delchars)+".npy"
+        data = np.load(path)
+        formatted_data.append({'name': param, 'vis_type': "Weights", 'data': data.tolist()})
+
+    for blob in net_blobs:
+        path = o+"blobs/"+blob.translate(None,delchars)+".npy"
+        data = np.load(path)
+        formatted_data.append({'name': blob, 'vis_type': "Activation", 'data': data.tolist()})
+
+
+    return flask.jsonify({'data': formatted_data[0]})
 
 @blueprint.route('/classify_one.json', methods=['POST'])
 @blueprint.route('/classify_one', methods=['POST', 'GET'])

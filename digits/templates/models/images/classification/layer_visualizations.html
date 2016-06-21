@@ -44,6 +44,35 @@ body , html, .container, .row {
     display: block;
 }
 
+.fa-spin-custom, .glyphicon-spin {
+  color:white;
+  font-size: 40px;
+  top: 50%;
+  -webkit-animation: spin 1000ms infinite linear;
+  animation: spin 1000ms infinite linear;
+}
+
+@-webkit-keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
+}
+
+@keyframes spin {
+    0% {
+      -webkit-transform: rotate(0deg);
+      transform: rotate(0deg);
+    }
+    100% {
+      -webkit-transform: rotate(359deg);
+      transform: rotate(359deg);
+    }
+}
 
 @media (max-width: 768px){
   body {padding-top:250px;}
@@ -65,10 +94,15 @@ body , html, .container, .row {
       .attr("src", e.target.result)
       .style("display","block");
 
+    d3.select("#loadingLayout").style("display","block");
+
     $('#navigation').ajaxForm();
     $('#navigation').ajaxSubmit({
-      url: window.base_url+"send_params?job_id={{model_job.id()}}",
+      url: window.base_url+"send_params?job_id={{model_job.id()}}&load_default="+window.load_default,
       success: function(json){
+        d3.select("#loadingLayout").style("display","none");
+
+        window.conv1data = json.conv1
         window.outputs_data = json.data;
         console.log("Outputs Loaded!");
       }
@@ -78,7 +112,6 @@ body , html, .container, .row {
 
 
   $(document).ready(function(){
-
 
     var navigation = d3.select("#navigation")
       .style({width: "200px", height: "100%",float: "left"})
@@ -105,7 +138,7 @@ body , html, .container, .row {
       .html("Select Image");
 
     inputContainer.append("input")
-      .attr({type: "file", name: "image_file"})
+      .attr({type: "file", name: "image_file", id: "image_file"})
       .on("change", function(){
         if (this.files && this.files[0]) {
             var reader = new FileReader();
@@ -113,7 +146,6 @@ body , html, .container, .row {
             reader.readAsDataURL(this.files[0]);
         }
       });
-
 
     init_vis('{{prototxt|tojson}}');
 
@@ -123,9 +155,11 @@ body , html, .container, .row {
 </script>
 
   <div class="row" style="display:inline;">
+
     <form id="navigation" name="navigation" method="post" enctype="multipart/form-data"></form>
     <div id="treeLayout"></div>
     <div id="layerLayout"></div>
+    <div id="loadingLayout"><span class="glyphicon glyphicon-refresh glyphicon-spin"></span></div>
     <form id="selectModelLayout" name="selectModel" method="post" enctype="multipart/form-data"></form>
     <div style="clear: both;"></div>
   </div>

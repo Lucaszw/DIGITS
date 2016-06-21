@@ -49,7 +49,7 @@ function getTreeData(type,text){
 
     fileReader.onreadystatechange = function (){
       if(fileReader.readyState === 4){
-        if(fileReader.status === 200 || rawFile.fileReader == 0){
+        if(fileReader.status === 200 || fileReader.readyState == 4){
           // Get the lines from the protobuf file
           lines = fileReader.responseText.split('\n');
         }

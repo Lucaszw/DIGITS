@@ -196,11 +196,6 @@ def infer(input_list, output_dir, jobs_dir, model_id, epoch, batch_size, layers,
             # Raw Visualization Data (For Layer Visualization Page)
 
             vis_data = layer['data'] if layer['data'] is not None else np.empty(0)
-            # print "PUTTING DATA FOR:"
-            # print layer['name']
-            # print layer['vis_type']
-            # print str(idx)
-            # print vis_data.shape
             vis_set = db_vis.create_dataset(str(idx), data=vis_data)
             vis_set.attrs['name'] = layer['name']
             vis_set.attrs['vis_type'] = layer['vis_type']

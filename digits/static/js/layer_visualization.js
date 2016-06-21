@@ -1,3 +1,5 @@
+var load_default = true;
+
 function init_vis(prototxt){
   // Setup container to hold layer outputs:
   d3.select("#layerLayout")
@@ -9,12 +11,16 @@ function init_vis(prototxt){
       display: "none"
     });
 
+
   // Setup container to hold tree layout of model layers:
   var treeContainer = d3.select('#treeLayout')
     .style({"margin-left": "210px", height: "100%"})
     .append("div")
       .attr("class", "panel panel-default")
       .style({"height": "100%", overflow: "hidden", background: "#F2F2F2"});
+
+  // Setup loading container
+  drawLoadingContainer("#loadingLayout");
 
   // Setup model selector container:
   drawModelSelection('#selectModelLayout');
@@ -85,6 +91,16 @@ function drawModelSelection(selector){
         success: function(json){
           console.log(json);
           console.log("Model is ready to go!");
+
+          var fileInput = $('#image_file');
+          fileInput.val('');
+
+          d3.select(selector).style("display","none");
+          var treeContainer = d3.select("#treeLayout div").html('');
+          getTreeData('string',json.data.prototxt);
+          loadTree('#treeLayout .panel',$(treeContainer.node()).height()/2);
+
+          window.load_default = false;
         }
       });
     })
@@ -93,6 +109,9 @@ function drawModelSelection(selector){
   $(selector).ajaxForm();
 
 }
+
+
+
 
 function drawKernel(container,data){
   // Draws an array of panels representing the layer outputs for a given dataset
@@ -105,7 +124,7 @@ function drawKernel(container,data){
   // h, w = dimensions of single output container
   // grid_dim = # pixels per image column
   // pixel_h,w = size of each output pixel
-  var h = w = 50;
+  var h = w = 75;
   var grid_dim = data[0][0].length;
   var pixel_h = pixel_w = h/grid_dim;
 
@@ -117,8 +136,8 @@ function drawKernel(container,data){
   // iterate through each output
   _.each(data, function(output_data,i){
 
-    // draw a maximum of 1000 outputs (for better performance)
-    if (i > 1000) return;
+    // draw a maximum of 2000 outputs (for better performance)
+    if (i > 2000) return;
 
     // initate a canvas to draw pixels in output on:
     var output_container = container.append("canvas")
@@ -167,6 +186,20 @@ function showTab(vis_type){
     d3.select(node)
       .style("display", type == vis_type ? "block" : "none");
   });
+}
+
+
+function drawLoadingContainer(selector){
+  d3.select(selector)
+    .style({
+      "margin-left": "210px",
+      "text-align": "center",
+      height: "100%",
+      background: "rgba(0,0,0,0.5)",
+      position: "relative",
+      display: "none",
+      top: -1*d3.select("#treeLayout").node().getBoundingClientRect().height + 'px'
+    });
 }
 
 
@@ -225,42 +258,53 @@ function buildTitlebar(container, layers, layer){
 
 }
 
+
+
 function showLayer(layer){
   // ** Requires window.outputs_data variable container outputs for each layer **
 
-  // Get outputs of layer that was clicked:
-  var selected_layers = _.filter(window.outputs_data,function(d){return d.name == layer.name});
+  var url = window.base_url+"get_single_layer?layer_name="+layer.name;
+  d3.select("#loadingLayout").style("display","block");
 
-  // If clicked layer has no outputs then exit
-  if (selected_layers.length < 1) return;
+  d3.json(url, function(error, json) {
+    console.log(error);
+    var selected_layers = json.data;
+    d3.select("#loadingLayout").style("display","none");
+    // If clicked layer has no outputs then exit
+    if (selected_layers.length < 1) return;
 
-  // Container Styles:
-  var container_attr = {class: "panel panel-default vis-layer"};
-  var container_style = {height: "100%", overflow: "auto", "line-height": "1px"};
-  var layerContainer = d3.select("#layerLayout").style("display","block").html('');
+    // Container Styles:
+    var container_attr = {class: "panel panel-default vis-layer"};
+    var container_style = {height: "100%", overflow: "auto", "line-height": "1px"};
+    var layerContainer = d3.select("#layerLayout").style("display","block").html('');
 
-  // Draw outputs inside the layerLayout div container:
-  _.each(selected_layers, function(outputs,i){
+    // Draw outputs inside the layerLayout div container:
+    _.each(selected_layers, function(outputs,i){
 
-    // Setup container for given outputs
-    var container = layerContainer.append("div")
-      .attr(container_attr).style(container_style)
-      .attr("data-type", outputs.vis_type);
+      // Setup container for given outputs
+      var container = layerContainer.append("div")
+        .attr(container_attr).style(container_style)
+        .attr("data-type", outputs.vis_type);
 
-    // Hide all but first set of outputs at first:
-    container.style("display", i == 0 ? "block" : "none");
+      // Hide all but first set of outputs at first:
+      container.style("display", i == 0 ? "block" : "none");
 
-    // Draw titlebar:
-    buildTitlebar(container, selected_layers,outputs);
+      // Draw titlebar:
+      buildTitlebar(container, selected_layers,outputs);
 
-    // Draw outputs:
-    drawKernel(container, outputs.data);
+      // Draw outputs:
+      drawKernel(container, outputs.data);
+    });
+
+    // Show container holding all outputs for this layer:
+    layerContainer.style({
+      position: "relative",
+      top: -1*d3.select("#treeLayout").node().getBoundingClientRect().height + 'px'
+    });
+
+
   });
 
-  // Show container holding all outputs for this layer:
-  layerContainer.style({
-    position: "relative",
-    top: -1*d3.select("#treeLayout").node().getBoundingClientRect().height + 'px'
-  });
+
 
 }
