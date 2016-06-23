@@ -89,19 +89,18 @@ body , html, .container, .row {
   function showUploader(){
     // Setup model selector container:
     drawModelSelection('#selectModelLayout');
-    // d3.select("#selectModelLayout").style("display","block");
   }
 
   function imageIsLoaded(e) {
-    d3.select("#myImg")
-      .attr("src", e.target.result)
-      .style("display","block");
+    // d3.select("#myImg")
+    //   .attr("src", e.target.result)
+    //   .style("display","block");
 
     var loadingLayout = drawLoadingContainer("#loadingLayout");
 
     $('#navigation').ajaxForm();
     $('#navigation').ajaxSubmit({
-      url: window.base_url+"send_params?job_id={{model_job.id()}}&load_default="+window.load_default,
+      url: window.base_url+"send_params?job_id={{model_job.id()}}&load_default="+window.load_default+"&job_path="+window.job_path,
       success: function(json){
         loadingLayout.html('');
         window.conv1data = json.conv1
@@ -127,9 +126,47 @@ body , html, .container, .row {
         .attr("class", "panel panel-default text-center")
         .style({"padding-top": "0px", height: "100%"});
 
-    file_selecion.append("img")
-      .attr({id: "myImg",src: "#", class: "panel panel-default"})
-      .style({height: "130px", "margin": "0 auto 10px auto", "min-width": "100px", "max-width": "180px"});
+
+    // *** CAROUSEL ****
+    var carouselOuter = file_selecion.append("div")
+      .attr("id", "imageCarousel")
+      .attr("class","panel panel-default  carousel slide")
+      .style({
+        margin: "0 auto 10px auto",
+        "data-interval": "false",
+        "data-pause": "true",
+        "data-wrap": "false",
+        width: "180px",
+        height: "180px",
+        overflow: "hidden"
+      });
+
+    var carouselInner = carouselOuter.append("div")
+      .attr("class","carousel-inner");
+
+    carouselOuter.append("a").attr({
+      "class": "left carousel-control",
+      "href": "#imageCarousel",
+      "role": "button",
+      "data-slide": "prev"
+    }).append("span").attr("class","glyphicon glyphicon-chevron-left");
+
+    carouselOuter.append("a").attr({
+      "class": "right carousel-control",
+      "href": "#imageCarousel",
+      "role": "button",
+      "data-slide": "next"
+    }).append("span").attr("class","glyphicon glyphicon-chevron-right");
+
+    $("#imageCarousel").carousel({ interval: false });
+    $('#imageCarousel').bind('slide.bs.carousel', function (e, b) {
+      window.selected_image = e.relatedTarget.dataset.key;
+    });
+
+
+    // file_selecion.append("img")
+    //   .attr({id: "myImg",src: "#", class: "panel panel-default"})
+    //   .style({height: "130px", "margin": "0 auto 10px auto", "min-width": "100px", "max-width": "180px"});
 
     var inputContainer = file_selecion.append("span")
       .attr("class","btn btn-sm btn-primary btn-file")
@@ -141,8 +178,7 @@ body , html, .container, .row {
         margin: "20px auto 0px auto",
         "max-height": "127px",
         "overflow-y": "scroll",
-        width: "230px",
-        "border-bottom": "1px solid #eaeaea"
+        width: "230px"
       });
 
     var listItemStyle = {
@@ -153,21 +189,26 @@ body , html, .container, .row {
       margin: "0 auto",
       background: "none"
     };
+
+    var emptyItemStyle = _.extend(_.clone(listItemStyle),{background: "#F3F3F3"});
+
+    // Add List Items for Each Job
     _.each(window.pretrained, function(item){
-      listGroup.append("btn").attr("class","btn btn-sm btn-default")
-      .style(listItemStyle).html(item.jobname);
+      listGroup.append("btn")
+        .attr("class","btn btn-sm btn-default")
+        .style(listItemStyle)
+        .on("click",function(){loadJob(item)})
+        .html(item.jobname);
     });
+
+    // Add Empty List Items
     _.each(_.range(0,4-window.pretrained.length), function(item){
       listGroup.append("btn")
-      .attr("class","btn btn-sm btn-default")
-      .attr("disabled","")
-      .style(_.extend(_.clone(listItemStyle),{
-        background: "#F3F3F3"
-      }))
-      .html("&nbsp;");
+        .attr("class","btn btn-sm btn-default")
+        .attr("disabled","")
+        .style(emptyItemStyle)
+        .html("&nbsp;");
     });
-
-
 
     file_selecion.append("a")
       .attr("class","btn btn-default btn-sm")

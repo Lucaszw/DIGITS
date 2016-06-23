@@ -1,4 +1,4 @@
-var selected_neuron,selected_layer;
+var selected_image, selected_neuron, selected_layer, job_path;
 var load_default = true;
 // Default to faded red,yellow,green,blue as color map (only applies if greyscale data):
 var colormap = chroma.scale(['#541E8A','#3F84FE','#87BCFF','#4BD29F','#9AFFA2','#F3AC5A','#FF0000']).colors(255);
@@ -21,8 +21,6 @@ function init_vis(prototxt){
     .append("div")
       .attr("class", "panel panel-default")
       .style({"height": "100%", overflow: "hidden", background: "#F2F2F2"});
-
-
 
   // Load layers from prototxt file:
   getTreeData('string',prototxt);
@@ -143,6 +141,7 @@ function drawOutputs(container,data){
               top: "5px", left: "5px", zIndex: 1, boxShadow: "0px 3px 13px 1px rgba(0,0,0,0.5)"};
   var mouseout  = {height: "75px", width: "75px", marginTop: "auto", marginLeft: "auto",
               top: "0px", left: "0px", zIndex: 0, boxShadow: "none"};
+
 
   // iterate through each output
   _.each(data, function(output_data,i){
@@ -344,11 +343,72 @@ function showDeconv(){
 function showLayer(layer, activeTab){
 
   // ** Requires window.outputs_data variable container outputs for each layer **
-  var url = window.base_url+"get_single_layer?layer_name="+layer.name;
+  var outputs_url  = window.base_url+"get_outputs?layer_name="+layer.name+"&path="+window.job_path+"&image_key="+window.selected_image;
 
+  // var weights_url     = window.base_url+"get_weights?layer_name="+layer.name+"&path="+window.job_path;
+  // var activations_url = window.base_url+"get_activations?layer_name="+layer.name+"&path="+window.job_path+"&image_key="+window.selected_image;
+
+  var selected_layers = new Array();
+
+  d3.json(outputs_url, function(error, json) {
+
+    var titles = _.keys(_.pick(temp1,function(v,k){return v.length > 0}));
+
+    _.each(json, function(outputs,type){
+
+    });
+
+  });
+
+  return;
+
+  // d3.json(activations_url, function(error, json) {
+  //   if (json.data.length < 1) return;
+  //   selected_layers.push({type: "Activations", data: json.data});
+  // });
+
+  // console.log(selected_layers);
+  return;
+  var loadingContainer = drawLoadingContainer("#loadingLayout");
+  d3.json(url3, function(error, json) {
+    console.log(json);
+    var weights = json.data;
+    loadingContainer.html('');
+    // If clicked layer has no outputs then exit
+    if (weights.length < 1) return;
+    window.selected_layer = layer.name;
+
+    // Container Styles:
+    var container_attr = {class: "panel panel-default vis-layer"};
+    var container_style = {height: "100%", overflow: "auto", "line-height": "1px"};
+    var layerContainer = d3.select("#layerLayout").style({
+      display: "inline-block",
+      "text-align": "center"
+    });
+
+    // Setup container for given outputs
+    var container = layerContainer.append("div")
+      .attr(container_attr).style(container_style)
+      .attr("data-type", "Weights");
+
+    var outputContainer = container.append("div")
+      .style({display: "inline-block"});
+    // Draw outputs:
+    drawOutputs(outputContainer, weights);
+
+    // Show container holding all outputs for this layer:
+    layerContainer.style({
+      position: "relative",
+      top: -1*d3.select("#treeLayout").node().getBoundingClientRect().height + 'px'
+    });
+
+  });
+
+
+
+  return;
   // Setup loading container
   var loadingContainer = drawLoadingContainer("#loadingLayout");
-
   d3.json(url, function(error, json) {
     var selected_layers = json.data;
 
@@ -398,4 +458,49 @@ function showLayer(layer, activeTab){
 
   });
 
+}
+
+function loadJob(item){
+  // Fetch Pretrained Model Weights, and processed images:
+  var url = window.base_url + "load_pretrained_model?path=" + item.path;
+
+  d3.json(url, function(error, json) {
+
+    // Set global job path to this items path:
+    window.job_path = item.path;
+    window.load_default = false;
+    window.selected_image = "0";
+
+    // Clear fileInput (incase want to add another image):
+    var fileInput = $('#image_file');
+    fileInput.val('');
+
+    // Clear Tree Container, and re-draw with new Model Definition:
+    var treeContainer = d3.select("#treeLayout div").html('');
+    getTreeData('string',json.data.prototxt);
+    loadTree('#treeLayout .panel',$(treeContainer.node()).height()/2);
+
+    // Add all images available for visualization to a image carousel
+    // TODO: Create a image carousel/handling class:
+    var carouselInner = d3.select("#imageCarousel .carousel-inner");
+    var canvasAttribtes = {height: 180, width: 180};
+    var canvasStyles    = {height: "180px", width: "180px"};
+
+    _.each(json.images, function(image, i){
+
+      // Generate a canvas for each image:
+      var canvas = carouselInner.append("canvas")
+        .attr(canvasAttribtes)
+        .style(canvasStyles)
+        .attr("data-key",image.key)
+        .attr("class", "item "+ (i == 0 ? "active" : "") );
+
+      // Draw image onto canvas (as its currently saved as array)
+      var ctx = canvas.node().getContext("2d");
+      ctx.clearRect(0, 0, 180,180);
+      var grid_dim = image.img[0][0].length;
+      drawNeuron(image.img[0],ctx,180/grid_dim,180/grid_dim);
+    });
+
+  });
 }

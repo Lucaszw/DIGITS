@@ -342,7 +342,7 @@ def layer_visualizations():
     for path in lst:
         f = h5py.File(o+'jobs/'+path+'/vis_data.hdf5')
         jobname = f['jobname'].attrs['jobname']
-        pretrained.append({'jobname':jobname, 'path': path})
+        pretrained.append({'jobname': jobname, 'path': path})
 
     # Render view:
     prototxt  = open(prototxt_path,'r').read()
@@ -356,8 +356,12 @@ def layer_visualizations():
 @blueprint.route('/run_model',  methods=['POST', 'GET'])
 def run_model():
     """
-    Load a pre-trained model for forward pass, or de-conv tasks
+    Save a pre-trained model
+    prototxt <file> -- deploy.prototxt file
+    caffemodel <file> -- ***.caffemodel
+    jobname <form> -- what to save job as
     """
+
     timestamp = datetime.now().strftime('%Y-%m-%d%H-%M-%S')
 
     # Get prototxt (model definition) from form:
@@ -372,34 +376,68 @@ def run_model():
     caffemodel_path = caffemodel[1]
     os.close(caffemodel[0])
 
+    outputs_path = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+
+    # Move the model definition and weights into the layer_outputs folder:
+    call(["mv", prototxt_path, outputs_path+"deploy.prototxt"])
+    call(["mv", caffemodel_path, outputs_path+"model.caffemodel"])
+
+    # Add force_backward to input parameters for deconv:
+    filename = outputs_path+"deploy.prototxt"
+    with file(filename, 'r') as original: data = original.read()
+    if 'force_backward' not in data:
+        with file(filename, 'w') as modified: modified.write("force_backward: true\n" + data)
+
+    o_proto = outputs_path+"jobs/"+timestamp+"/deploy.prototxt"
+    o_caffmodel = outputs_path+"jobs/"+timestamp+"/model.caffemodel"
+
     # Add prototxt and caffe model to jobs directory:
-    call(["mkdir", "digits/layer_outputs/jobs/"+timestamp])
-    call(["cp", prototxt_path, "digits/layer_outputs/jobs/"+timestamp+"/deploy.prototxt"])
-    call(["cp", caffemodel_path, "digits/layer_outputs/jobs/"+timestamp+"/caffemodel_path.prototxt"])
+    call(["mkdir", outputs_path+"jobs/"+timestamp])
+    call(["cp", outputs_path+"deploy.prototxt", o_proto])
+    call(["cp", outputs_path+"model.caffemodel", o_caffmodel])
 
     # Write a database to hold vis information:
     f = h5py.File('digits/layer_outputs/jobs/'+timestamp+'/vis_data.hdf5','w-')
     dset = f.create_dataset("jobname", (1,) , dtype="i")
     dset.attrs['jobname'] = flask.request.form['jobname']
+    dset.attrs['timestamp'] = timestamp
 
-    # Move the model definition and weights into the layer_outputs folder:
-    filename = "digits/layer_outputs/deploy.prototxt"
-    call(["mv", prototxt_path, filename])
-    call(["mv", caffemodel_path, "digits/layer_outputs/model.caffemodel"])
-
-
-    with file(filename, 'r') as original: data = original.read()
-
-    # Add force_backward to input parameters for deconv:
-    if 'force_backward' not in data:
-        with file(filename, 'w') as modified: modified.write("force_backward: true\n" + data)
+    # Save Weights:
+    p = Popen(["python", outputs_path+"get_weights.py", o_proto, o_caffmodel, outputs_path+"jobs/"+timestamp])
+    p.wait()
 
     # Render new model def in view:
     prototxt = open(filename,'r').read()
 
-
     return flask.jsonify({'data': {"prototxt": prototxt}})
 
+
+@blueprint.route('/load_pretrained_model.json', methods=['POST'])
+@blueprint.route('/load_pretrained_model', methods=['POST', 'GET'])
+def load_pretrained_model():
+    """
+    Load a pre-trained model
+    path <Args> -- path to job
+    """
+    path            = "jobs/"+flask.request.args['path']  + "/"
+    outputs_path    = os.path.abspath(digits.__path__[0]) + "/layer_outputs/"
+    job_path        = outputs_path + path
+    prototxt_path   = job_path+"deploy.prototxt"
+    caffemodel_path = job_path+"model.caffemodel"
+
+    # Make this job the active job by moving into the output path
+    call(["cp", prototxt_path, outputs_path+"deploy.prototxt"])
+    call(["cp", caffemodel_path, outputs_path+"model.caffemodel"])
+
+    # Get all the images stored for this job:
+    f = h5py.File(job_path+'/activations.hdf5','a')
+    image_data = []
+    for key in f:
+        image_data.append({"key": key , "img": f[key]['data'][:].tolist()})
+
+    # Render new model def in view:
+    prototxt = open(job_path+"deploy.prototxt",'r').read()
+    return flask.jsonify({'data': {"prototxt": prototxt}, 'images': image_data})
 
 @blueprint.route('/get_backprop_from_neuron_in_layer.json', methods=['POST'])
 @blueprint.route('/get_backprop_from_neuron_in_layer', methods=['POST', 'GET'])
@@ -456,6 +494,79 @@ def deconv_neuron_in_layer():
     return flask.jsonify({'data': data.tolist()})
 
 
+@blueprint.route('/get_outputs.json', methods=['POST', 'GET'])
+@blueprint.route('/get_outputs',  methods=['POST', 'GET'])
+def get_outputs():
+    """
+    Return the outputs of weights and activations for a given layer
+    path <Args> -- path to job
+    layer_name <Args> -- name of layer
+    image_key <Args> --  key to image ("0" .. num of images in db)
+    """
+    path = os.path.abspath(digits.__path__[0])+"/layer_outputs/jobs/"+ str(flask.request.args['path'])+"/"
+    image_key  = flask.request.args['image_key']
+    layer_name = flask.request.args['layer_name']
+
+    layer_weights = weights(path,layer_name)
+    layer_activations = activations(path,image_key,layer_name)
+
+    return flask.jsonify({'weights': layer_weights, 'activations': layer_activations})
+
+@blueprint.route('/get_weights.json', methods=['POST', 'GET'])
+@blueprint.route('/get_weights',  methods=['POST', 'GET'])
+def get_weights():
+    """
+    Returns the weights for a selected layer
+    path <Args> -- path to job
+    layer_name <Args> -- name of layer
+    """
+    # Get Path and Layer Name from input arguments:
+    path = os.path.abspath(digits.__path__[0])+"/layer_outputs/jobs/"+ str(flask.request.args['path'])+"/"
+    layer_name  = str(flask.request.args['layer_name'])
+
+    return flask.jsonify({'data':  weights(path, layer_name)})
+
+@blueprint.route('/get_activations.json', methods=['POST', 'GET'])
+@blueprint.route('/get_activations',  methods=['POST', 'GET'])
+def get_activations():
+    """
+    Return the activations for a specific layer and image
+    path <Args> -- path to job
+    layer_name <Args> -- name of layer
+    image_key <Args> --  key to image ("0" .. num of images in db)
+    """
+    # Get Path and Layer Name from input arguments:
+    path = os.path.abspath(digits.__path__[0])+"/layer_outputs/jobs/"+ str(flask.request.args['path'])+"/"
+    layer_name  = str(flask.request.args['layer_name'])
+    image_key   = str(flask.request.args['image_key'])
+
+    return flask.jsonify({'data': activations(path,image_key,layer_name)})
+
+def activations(path,image_key,layer_name):
+    # Read activations file, and group containing activations for given image:
+    f = h5py.File(path+'activations.hdf5','r')
+    grp = f[image_key]
+
+    # Return activations of first 100 neurons:
+    # TODO: Resolution should be an input parameter!
+    if layer_name in grp:
+        data = grp[layer_name][:100,::5,::5].tolist()
+    else:
+        data = []
+
+    return data
+
+def weights(path,layer_name):
+    # Read weights file:
+    f = h5py.File(path+'weights.hdf5','r')
+    if layer_name in f:
+        data = f[layer_name][:100].tolist()
+    else:
+        data = []
+
+    return data
+
+
 @blueprint.route('/get_single_layer.json', methods=['POST', 'GET'])
 @blueprint.route('/get_single_layer',  methods=['POST', 'GET'])
 def get_single_layer():
@@ -498,10 +609,16 @@ def get_single_layer():
 @blueprint.route('/send_params.json', methods=['POST', 'GET'])
 @blueprint.route('/send_params',  methods=['POST', 'GET'])
 def send_params():
+    """
+    Load image & Save activations
+    load_default <Args> -- true/false (should load from current task or folder)
+    job_path     <Args> -- path of job to save outputs to
+    """
     model_job = job_from_request()
-    image      = None
-    epoch      = None
-    layers     = 'all'
+
+    # Set job path from flask input arguments
+    job_path   = flask.request.args['job_path']
+    pretrained = flask.request.args['load_default'] == 'false'
 
     # Store image file temporarily:
     outfile = tempfile.mkstemp(suffix='.png')
@@ -509,19 +626,23 @@ def send_params():
     image_path = outfile[1]
     os.close(outfile[0])
 
-    pretrained = flask.request.args['load_default'] == 'false'
-
     o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+    o_proto     = o + "deploy.prototxt"
+    o_caffmodel = o + "model.caffemodel"
+
     if not pretrained:
         caffemodel  = model_job.train_task().get_caffemodel()
         prototxt    = model_job.train_task().get_depoly_prototxt()
         p = Popen(["python", o+"generate_outputs.py", image_path, prototxt, caffemodel]);p.wait()
     else:
-        p = Popen(["python", o+"generate_outputs.py", image_path, o+"deploy.prototxt", o+"model.caffemodel"]);p.wait()
+        p = Popen(["python", o+"generate_outputs.py", image_path, o_proto, o_caffmodel]);p.wait()
+
+    # Save Activations:
+    p = Popen(["python", o+"get_activations.py", image_path, o_proto, o_caffmodel, o+"jobs/"+job_path])
+    p.wait()
 
 
     call(["mv", image_path, "digits/layer_outputs/image.png"])
-
 
     delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
 
@@ -539,8 +660,6 @@ def send_params():
         path = o+"blobs/"+blob.translate(None,delchars)+".npy"
         data = np.load(path)
         formatted_data.append({'name': blob, 'vis_type': "Activation", 'data': data.tolist()})
-
-
 
     return flask.jsonify({'data': formatted_data[0]})
 
