@@ -243,6 +243,7 @@ function loadTree(selector,height){
               });
           }
       };
+
       childCount(0, root);
       var newHeight = d3.max(levelWidth) * 25; // 25 pixels per line
       tree = tree.size([newHeight, viewerWidth]);
@@ -269,8 +270,7 @@ function loadTree(selector,height){
         .attr("id", function(d){return "node-"+d.name})
         .attr("transform", function(d) {
             return "translate(" + source.y0 + "," + source.x0 + ")";
-        })
-        .on('click', layerClicked);
+        });
 
 
       nodeEnter.append("rect")
@@ -278,7 +278,8 @@ function loadTree(selector,height){
           return isDown(d.parent.name) == false ? boxWidth : 0;
         })
         .attr({height: 40, y: -20, x: -boxWidth, stroke:"white", "stroke-width": 2})
-        .style("fill",function(d){return COLORS[_.indexOf(types,d.type)]});
+        .style("fill",function(d){return COLORS[_.indexOf(types,d.type)]})
+        .on('click', layerClicked);
 
       nodeEnter.append("circle")
         .attr({r: 6, stroke: "white", "stroke-width": 2})
@@ -309,7 +310,8 @@ function loadTree(selector,height){
         .attr('fill', function(d, i) { return 'url(#gradient)'; })
         .text(function(d) {
             return isDown(d.parent.name) == false ? "" : d.name;
-        });
+        })
+        .on('click', layerClicked);
 
 
         nodeEnter.append("text")
@@ -318,7 +320,8 @@ function loadTree(selector,height){
           .attr("dy", "-5px")
           .text(function(d) {
             return isDown(d.parent.name) == false ? "" : d.type;
-          });
+          })
+          .on('click', layerClicked);
 
       // Transition nodes to their new position.
       var nodeUpdate = node.transition()

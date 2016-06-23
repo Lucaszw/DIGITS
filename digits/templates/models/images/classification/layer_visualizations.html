@@ -34,7 +34,7 @@ body , html, .container, .row {
     right: 0;
     min-width: 100%;
     min-height: 100%;
-    font-size: 100px;
+    font-size: 200px;
     text-align: right;
     filter: alpha(opacity=0);
     opacity: 0;
@@ -84,9 +84,12 @@ body , html, .container, .row {
   window.prototxt = {{prototxt|tojson}};
   window.job_id   = '{{model_job.id()}}';
   window.base_url = "http://localhost:5000/models/images/classification/";
+  window.pretrained = {{pretrained|tojson}}
 
   function showUploader(){
-    d3.select("#selectModelLayout").style("display","block");
+    // Setup model selector container:
+    drawModelSelection('#selectModelLayout');
+    // d3.select("#selectModelLayout").style("display","block");
   }
 
   function imageIsLoaded(e) {
@@ -94,39 +97,79 @@ body , html, .container, .row {
       .attr("src", e.target.result)
       .style("display","block");
 
-    d3.select("#loadingLayout").style("display","block");
+    var loadingLayout = drawLoadingContainer("#loadingLayout");
 
     $('#navigation').ajaxForm();
     $('#navigation').ajaxSubmit({
       url: window.base_url+"send_params?job_id={{model_job.id()}}&load_default="+window.load_default,
       success: function(json){
-        d3.select("#loadingLayout").style("display","none");
-
+        loadingLayout.html('');
         window.conv1data = json.conv1
         window.outputs_data = json.data;
-        console.log("Outputs Loaded!");
       }
     });
-
   };
-
 
   $(document).ready(function(){
 
     var navigation = d3.select("#navigation")
-      .style({width: "200px", height: "100%",float: "left"})
+      .style({width: "200px", height: "100%",float: "left"});
+
+    var file_selecion = navigation.append("div")
+      .style({height: "50%", "padding-bottom": "10px"})
       .append("div")
         .attr("class", "panel panel-default text-center")
-        .style({"padding-top": "10px", height: "100%"});
+        .style({"padding-top": "10px", height: "100%", overflow: "hidden"});
 
-    navigation.append("img")
+    var model_visualizations = navigation.append("div")
+      .style({height: "50%"})
+      .append("div")
+        .attr("class", "panel panel-default text-center")
+        .style({"padding-top": "0px", height: "100%"});
+
+    file_selecion.append("img")
       .attr({id: "myImg",src: "#", class: "panel panel-default"})
-      .style({width: "180px", "margin-left": "10px", "max-height": "200px", display: "none"});
+      .style({height: "130px", "margin": "0 auto 10px auto", "min-width": "100px", "max-width": "180px"});
 
-    var inputContainer = navigation.append("span")
-      .attr("class","btn btn-sm btn-primary btn-file");
+    var inputContainer = file_selecion.append("span")
+      .attr("class","btn btn-sm btn-primary btn-file")
+      .style({display: "block", width: "150px", margin: "0 auto"});
 
-    navigation.append("a")
+
+    var listGroup = file_selecion.append("div")
+      .style({
+        margin: "20px auto 0px auto",
+        "max-height": "127px",
+        "overflow-y": "scroll",
+        width: "230px",
+        "border-bottom": "1px solid #eaeaea"
+      });
+
+    var listItemStyle = {
+      width: "170px",
+      position: "relative",
+      left: "-7px",
+      display: "block",
+      margin: "0 auto",
+      background: "none"
+    };
+    _.each(window.pretrained, function(item){
+      listGroup.append("btn").attr("class","btn btn-sm btn-default")
+      .style(listItemStyle).html(item.jobname);
+    });
+    _.each(_.range(0,4-window.pretrained.length), function(item){
+      listGroup.append("btn")
+      .attr("class","btn btn-sm btn-default")
+      .attr("disabled","")
+      .style(_.extend(_.clone(listItemStyle),{
+        background: "#F3F3F3"
+      }))
+      .html("&nbsp;");
+    });
+
+
+
+    file_selecion.append("a")
       .attr("class","btn btn-default btn-sm")
       .style({position: "relative", top: "10px"})
       .on("click", showUploader)
@@ -145,7 +188,26 @@ body , html, .container, .row {
             reader.onload = imageIsLoaded;
             reader.readAsDataURL(this.files[0]);
         }
-      });
+    });
+
+    model_visualizations.append("div").attr("id", "locked_backprop_container")
+        .attr({class: "panel panel-default"})
+        .style({height: "180px", width: "180px", display: "none", margin: "5px auto"});
+
+    model_visualizations.append("div").attr("id", "backprop_layer");
+    model_visualizations.append("div").attr("id", "backprop_output");
+
+    var visualizations = d3.select("#layerLayout").append("div")
+      .attr("class", "panel panel-default")
+      .style({height: "100%", "text-align":"center", width: "220px", float: "right", "margin-left": "10px"});
+
+    visualizations.append("canvas").attr("id", "neuron_visualization")
+        .attr({height: "180px", width: "180px", class: "panel panel-default"})
+        .style({position: "relative", top: "15px"});
+
+    visualizations.append("div").attr("id","deconv_container")
+        .attr("class", "panel panel-default")
+        .style({height: "180px", width: "180px", margin: "0 auto"});
 
     init_vis('{{prototxt|tojson}}');
 
@@ -159,7 +221,7 @@ body , html, .container, .row {
     <form id="navigation" name="navigation" method="post" enctype="multipart/form-data"></form>
     <div id="treeLayout"></div>
     <div id="layerLayout"></div>
-    <div id="loadingLayout"><span class="glyphicon glyphicon-refresh glyphicon-spin"></span></div>
+    <div id="loadingLayout"></div>
     <form id="selectModelLayout" name="selectModel" method="post" enctype="multipart/form-data"></form>
     <div style="clear: both;"></div>
   </div>

@@ -26,6 +26,11 @@ from digits.webapp import app, scheduler
 
 blueprint = flask.Blueprint(__name__, __name__)
 
+# TODO: Move this somewhere else!
+import h5py
+from datetime import datetime
+
+
 """
 Read image list
 """
@@ -314,16 +319,37 @@ def large_graph():
 
 @blueprint.route('/layer_visualizations', methods=['POST', 'GET'])
 def layer_visualizations():
-    # job_id=20160613-133912-115d
-
+    # Get initial visualizations from job request:
     model_job = job_from_request()
     task = model_job.train_task()
     net       = task.get_net(None,0)
-    prototxt  = open(task.path(task.deploy_file),'r').read()
 
+    o = "digits/layer_outputs/"
+    # Copy files to layer_outputs (as this is the directory visualizations
+    # will read from:
+    prototxt_path = o+"deploy.prototxt"
+    call(["cp", task.get_depoly_prototxt(), prototxt_path])
+    call(["cp", task.get_caffemodel(), o+"model.caffemodel"])
+
+    # Add input param force_backward: true to enable deconv:
+    with file(prototxt_path, 'r') as original: data = original.read()
+    if 'force_backward' not in data:
+        with file(prototxt_path, 'w') as modified: modified.write("force_backward: true\n" + data)
+
+    # Get list of pre-trained models available for visualizations:
+    lst = os.listdir(o+"jobs")
+    pretrained = []
+    for path in lst:
+        f = h5py.File(o+'jobs/'+path+'/vis_data.hdf5')
+        jobname = f['jobname'].attrs['jobname']
+        pretrained.append({'jobname':jobname, 'path': path})
+
+    # Render view:
+    prototxt  = open(prototxt_path,'r').read()
     return flask.render_template('models/images/classification/layer_visualizations.html',
-            model_job       = model_job,
-            prototxt        = prototxt
+            model_job  = model_job,
+            prototxt   = prototxt,
+            pretrained = pretrained
             )
 
 @blueprint.route('/run_model.json', methods=['POST', 'GET'])
@@ -332,30 +358,103 @@ def run_model():
     """
     Load a pre-trained model for forward pass, or de-conv tasks
     """
+    timestamp = datetime.now().strftime('%Y-%m-%d%H-%M-%S')
 
+    # Get prototxt (model definition) from form:
     prototxt = tempfile.mkstemp(suffix='.prototxt')
     flask.request.files['prototxt'].save(prototxt[1])
     prototxt_path = prototxt[1]
     os.close(prototxt[0])
 
-
+    # Get weights from form:
     caffemodel = tempfile.mkstemp(suffix='.caffemodel')
     flask.request.files['weights'].save(caffemodel[1])
     caffemodel_path = caffemodel[1]
     os.close(caffemodel[0])
 
+    # Add prototxt and caffe model to jobs directory:
+    call(["mkdir", "digits/layer_outputs/jobs/"+timestamp])
+    call(["cp", prototxt_path, "digits/layer_outputs/jobs/"+timestamp+"/deploy.prototxt"])
+    call(["cp", caffemodel_path, "digits/layer_outputs/jobs/"+timestamp+"/caffemodel_path.prototxt"])
 
-    # mean = tempfile.mkstemp(suffix='.npy')
-    # flask.request.files['mean'].save(mean[1])
-    # mean_path = mean[1]
-    # os.close(mean[0])
+    # Write a database to hold vis information:
+    f = h5py.File('digits/layer_outputs/jobs/'+timestamp+'/vis_data.hdf5','w-')
+    dset = f.create_dataset("jobname", (1,) , dtype="i")
+    dset.attrs['jobname'] = flask.request.form['jobname']
 
-
-    call(["mv", prototxt_path, "digits/layer_outputs/deploy.prototxt"])
+    # Move the model definition and weights into the layer_outputs folder:
+    filename = "digits/layer_outputs/deploy.prototxt"
+    call(["mv", prototxt_path, filename])
     call(["mv", caffemodel_path, "digits/layer_outputs/model.caffemodel"])
 
-    prototxt = open("digits/layer_outputs/deploy.prototxt",'r').read()
+
+    with file(filename, 'r') as original: data = original.read()
+
+    # Add force_backward to input parameters for deconv:
+    if 'force_backward' not in data:
+        with file(filename, 'w') as modified: modified.write("force_backward: true\n" + data)
+
+    # Render new model def in view:
+    prototxt = open(filename,'r').read()
+
+
     return flask.jsonify({'data': {"prototxt": prototxt}})
+
+
+@blueprint.route('/get_backprop_from_neuron_in_layer.json', methods=['POST'])
+@blueprint.route('/get_backprop_from_neuron_in_layer', methods=['POST', 'GET'])
+def get_backprop_from_neuron_in_layer():
+    """
+    Runs backprop from the a neuron in a specified layer
+    """
+    # Get layer and neuron from inputs:
+    delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
+    layer_name    = str(flask.request.args['layer_name'])
+    neuron_index  = str(flask.request.args['neuron_index'])
+
+    # Get the last saved image, prototxt, and caffemodel
+    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+    image = o+"image.png"
+    prototxt = o+"deploy.prototxt"
+    caffemodel = o+"model.caffemodel"
+
+    # Run the backprop script
+    p = Popen(["python", o+"get_backprops.py", image, prototxt, caffemodel, layer_name, neuron_index]);p.wait()
+
+    # Return the outputs of the currently selected layer:
+    backprops_path  = o+"backprops/" + layer_name.translate(None,delchars)+".npy"
+    data = np.load(backprops_path)
+
+    return flask.jsonify({'data': data.tolist()})
+
+
+@blueprint.route('/deconv_neuron_in_layer.json', methods=['POST'])
+@blueprint.route('/deconv_neuron_in_layer', methods=['POST', 'GET'])
+def deconv_neuron_in_layer():
+    """
+    Sends the neuron features from a given layer into Deconv Network
+    and returns the the output of the 'data' layer
+    """
+    # Get layer and neuron from inputs:
+    delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
+    layer_name    = str(flask.request.args['layer_name'])
+    neuron_index  = str(flask.request.args['neuron_index'])
+
+    # Get the last saved image, prototxt, and caffemodel
+    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+    image = o+"image.png"
+    prototxt = o+"deploy.prototxt"
+    caffemodel = o+"model.caffemodel"
+
+    # Run the deconvolution script
+    p = Popen(["python", o+"get_deconv.py", image, prototxt, caffemodel, layer_name, neuron_index]);p.wait()
+
+    # Get outputs:
+    deconv_path  = o+"deconv/" + layer_name.translate(None,delchars)+".npy"
+    data = np.load(deconv_path)
+
+    return flask.jsonify({'data': data.tolist()})
+
 
 @blueprint.route('/get_single_layer.json', methods=['POST', 'GET'])
 @blueprint.route('/get_single_layer',  methods=['POST', 'GET'])
@@ -377,17 +476,22 @@ def get_single_layer():
     # Get location of filter output , and activation output
     weights_path  = o+"params/" + file_name
     activation_path  = o+"blobs/" + file_name
+    backprops_path   = o+"backprops/" + file_name
 
     # Put weights and activations into an array
     outputs = []
+
     if os.path.exists(weights_path):
         data = np.load(weights_path)
-        outputs.append({'name': layer_name, 'vis_type': 'Weights', 'data': data.tolist()})
-
+        outputs.append({'name': layer_name, 'vis_type': 'Weights', 'data': data.tolist()[:100]})
 
     if os.path.exists(activation_path):
         data = np.load(activation_path)
-        outputs.append({'name': layer_name, 'vis_type': 'Activation', 'data': data.tolist()})
+        outputs.append({'name': layer_name, 'vis_type': 'Activation', 'data': data.tolist()[:100]})
+
+    if os.path.exists(backprops_path):
+        data = np.load(backprops_path)
+        outputs.append({'name': layer_name, 'vis_type': 'Backprop', 'data': data.tolist()[:100]})
 
     return flask.jsonify({'data': outputs})
 
@@ -404,7 +508,6 @@ def send_params():
     flask.request.files['image_file'].save(outfile[1])
     image_path = outfile[1]
     os.close(outfile[0])
-    remove_image_path = True
 
     pretrained = flask.request.args['load_default'] == 'false'
 
@@ -417,8 +520,8 @@ def send_params():
         p = Popen(["python", o+"generate_outputs.py", image_path, o+"deploy.prototxt", o+"model.caffemodel"]);p.wait()
 
 
-    if remove_image_path:
-        os.remove(image_path)
+    call(["mv", image_path, "digits/layer_outputs/image.png"])
+
 
     delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
 
@@ -436,6 +539,7 @@ def send_params():
         path = o+"blobs/"+blob.translate(None,delchars)+".npy"
         data = np.load(path)
         formatted_data.append({'name': blob, 'vis_type': "Activation", 'data': data.tolist()})
+
 
 
     return flask.jsonify({'data': formatted_data[0]})
