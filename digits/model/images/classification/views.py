@@ -447,6 +447,7 @@ def get_backprop_from_neuron_in_layer():
     """
     # Get layer and neuron from inputs:
     delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
+    path          = "jobs/"+flask.request.args['path']  + "/"
     layer_name    = str(flask.request.args['layer_name'])
     neuron_index  = str(flask.request.args['neuron_index'])
 
@@ -472,20 +473,24 @@ def deconv_neuron_in_layer():
     """
     Sends the neuron features from a given layer into Deconv Network
     and returns the the output of the 'data' layer
+    path <Args> -- path to job
+    image_key <Args> --  key to image ("0" .. num of images in db)
+    layer_name <Args> -- layer that neuron resides in
+    neuron_index <Args> -- index of selected neuron
     """
-    # Get layer and neuron from inputs:
     delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
+    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+
+    # Get params from flask args:
+    path          = o+"jobs/"+flask.request.args['path']
+    image_key     = flask.request.args['image_key']
     layer_name    = str(flask.request.args['layer_name'])
     neuron_index  = str(flask.request.args['neuron_index'])
 
-    # Get the last saved image, prototxt, and caffemodel
-    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
-    image = o+"image.png"
-    prototxt = o+"deploy.prototxt"
-    caffemodel = o+"model.caffemodel"
 
     # Run the deconvolution script
-    p = Popen(["python", o+"get_deconv.py", image, prototxt, caffemodel, layer_name, neuron_index]);p.wait()
+    p = Popen(["python", o+"get_deconv.py", path, image_key, layer_name, neuron_index])
+    p.wait()
 
     # Get outputs:
     deconv_path  = o+"deconv/" + layer_name.translate(None,delchars)+".npy"
@@ -506,11 +511,11 @@ def get_outputs():
     path = os.path.abspath(digits.__path__[0])+"/layer_outputs/jobs/"+ str(flask.request.args['path'])+"/"
     image_key  = flask.request.args['image_key']
     layer_name = flask.request.args['layer_name']
+    layers = []
+    layers.append({'type':'weights', 'data': weights(path,layer_name)})
+    layers.append({'type':'activations', 'data': activations(path,image_key,layer_name)})
 
-    layer_weights = weights(path,layer_name)
-    layer_activations = activations(path,image_key,layer_name)
-
-    return flask.jsonify({'weights': layer_weights, 'activations': layer_activations})
+    return flask.jsonify({'layers': layers})
 
 @blueprint.route('/get_weights.json', methods=['POST', 'GET'])
 @blueprint.route('/get_weights',  methods=['POST', 'GET'])
@@ -550,7 +555,7 @@ def activations(path,image_key,layer_name):
     # Return activations of first 100 neurons:
     # TODO: Resolution should be an input parameter!
     if layer_name in grp:
-        data = grp[layer_name][:100,::5,::5].tolist()
+        data = grp[layer_name][:100,::4,::4].tolist()
     else:
         data = []
 

@@ -11,6 +11,7 @@ import digits
 from digits import utils
 import argparse
 from subprocess import call
+import h5py
 
 
 sys.path.insert(0,"/home/lzeerwanklyn/Projects/caffes/caffe-dvt/python")
@@ -21,12 +22,15 @@ os.environ['LD_LIBRARY_PATH'] = '/home/lzeerwanklyn/Projects/torches/torch-nv/in
 
 import caffe
 
-def write_deconv(image_path,deploy_prototxt, caffemodel,layer_name, neuron_index):
+def write_deconv(job_path,image_key,layer_name, neuron_index):
     delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
 
     # TODO: This should not be hardcoded!
     caffe.set_device(0)
     caffe.set_mode_gpu()
+
+    deploy_prototxt = job_path+"/deploy.prototxt"
+    caffemodel = job_path+"/model.caffemodel"
 
     # Load network
     net = caffe.Net(deploy_prototxt,caffemodel,caffe.TEST)
@@ -38,7 +42,15 @@ def write_deconv(image_path,deploy_prototxt, caffemodel,layer_name, neuron_index
     transformer.set_channel_swap('data', (2,1,0))
 
     # Load image and perform a forward pass
-    image = caffe.io.load_image(image_path)
+    f = h5py.File(job_path+'/activations.hdf5','r')
+    image = f[image_key]['data'][:][0]
+    print "IMAGE SHAPE:"
+    print image.shape
+
+    print "LAYER NAME:"
+    print layer_name
+
+
     transformed_image = transformer.preprocess('data', image)
     net.blobs['data'].data[...] = transformed_image
     net.forward()
@@ -63,12 +75,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Deconvolution tool - DIGITS')
 
     ### Positional arguments
-    parser.add_argument('image_path',
-            help='Input image (jpg,png,etc)')
-    parser.add_argument('deploy_prototxt',
-            help='File location of deploy.prototxt')
-    parser.add_argument('caffemodel',
-            help='File location of a **.caffemodel')
+    parser.add_argument('job_path',
+            help='Path to job containing deploy.prototxt and caffemodel')
+    parser.add_argument('image_key',
+            help='Group key of dataset containing image in activations.hdf5')
     parser.add_argument('layer_name',
             help='Name of layer (string)')
     parser.add_argument('neuron_index',
@@ -76,9 +86,8 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     write_deconv(
-        args['image_path'],
-        args['deploy_prototxt'],
-        args['caffemodel'],
+        args['job_path'],
+        args['image_key'],
         args['layer_name'],
         args['neuron_index'],
             )

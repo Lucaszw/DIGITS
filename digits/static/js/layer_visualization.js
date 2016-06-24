@@ -255,9 +255,9 @@ function buildTitlebar(container, layers, layer){
   // Draw Nav Buttons in Nav Container:
   _.each(layers, function(l){
 
-    var border_style = "1px solid " + (layer.vis_type == l.vis_type ? "#a7ecec" : "#E6E6E6");
-    var cursor_style = layer.vis_type == l.vis_type ? "default" : "pointer";
-    var bg_style    = layer.vis_type == l.vis_type ? "#d5ffff" : "#FFFFFF";
+    var border_style = "1px solid " + (layer.type == l.type ? "#a7ecec" : "#E6E6E6");
+    var cursor_style = layer.type == l.type ? "default" : "pointer";
+    var bg_style     = layer.type == l.type ? "#d5ffff" : "#FFFFFF";
     nav.append("div")
       .attr("class", "panel btn panel-default")
       .style({
@@ -267,11 +267,11 @@ function buildTitlebar(container, layers, layer){
         top: "5px",
         position: "relative",
       })
-      .on("click", function(){showTab(l.vis_type)})
+      .on("click", function(){showTab(l.type)})
       .style("cursor", cursor_style)
       .style("background", bg_style)
       .style("border", border_style)
-      .html(l.vis_type)
+      .html(l.type)
   });
 
 
@@ -291,7 +291,7 @@ function buildTitlebar(container, layers, layer){
 }
 
 function runBackprop() {
-  var url = window.base_url+"get_backprop_from_neuron_in_layer?layer_name="+window.selected_layer+"&neuron_index="+window.selected_neuron;
+  var url = window.base_url+"get_backprop_from_neuron_in_layer?layer_name="+window.selected_layer+"&neuron_index="+window.selected_neuron+"&path="+window.job_path;
   closePanel();
   // Setup loading container
   var loadingContainer = drawLoadingContainer("#loadingLayout");
@@ -316,7 +316,14 @@ function runBackprop() {
 }
 
 function showDeconv(){
-  var url = window.base_url+"deconv_neuron_in_layer?layer_name="+window.selected_layer+"&neuron_index="+window.selected_neuron;
+  var params = $.param({
+    layer_name: window.selected_layer,
+    neuron_index: window.selected_neuron,
+    path: window.job_path,
+    image_key: window.selected_image
+  });
+
+  var url = window.base_url+"deconv_neuron_in_layer?"+params;
 
   d3.select("#deconv_container")
     .style({background: "rgba(0,0,0,0.5)"}).html('')
@@ -325,6 +332,7 @@ function showDeconv(){
       .style({position:"relative", top: "70px"});
 
   d3.json(url, function(error, json) {
+    console.log(json);
     var container = d3.select("#deconv_container").html('');
 
     var canvas = container.append("canvas").attr("id", "deconv_visualization");
@@ -341,113 +349,44 @@ function showDeconv(){
 }
 
 function showLayer(layer, activeTab){
+  window.selected_layer = layer.name;
 
-  // ** Requires window.outputs_data variable container outputs for each layer **
+  
   var outputs_url  = window.base_url+"get_outputs?layer_name="+layer.name+"&path="+window.job_path+"&image_key="+window.selected_image;
 
-  // var weights_url     = window.base_url+"get_weights?layer_name="+layer.name+"&path="+window.job_path;
-  // var activations_url = window.base_url+"get_activations?layer_name="+layer.name+"&path="+window.job_path+"&image_key="+window.selected_image;
-
-  var selected_layers = new Array();
-
+  // Show loading container:
+  var loadingContainer = drawLoadingContainer("#loadingLayout");
   d3.json(outputs_url, function(error, json) {
-
-    var titles = _.keys(_.pick(temp1,function(v,k){return v.length > 0}));
-
-    _.each(json, function(outputs,type){
-
-    });
-
-  });
-
-  return;
-
-  // d3.json(activations_url, function(error, json) {
-  //   if (json.data.length < 1) return;
-  //   selected_layers.push({type: "Activations", data: json.data});
-  // });
-
-  // console.log(selected_layers);
-  return;
-  var loadingContainer = drawLoadingContainer("#loadingLayout");
-  d3.json(url3, function(error, json) {
-    console.log(json);
-    var weights = json.data;
+    // Hide loading container
     loadingContainer.html('');
-    // If clicked layer has no outputs then exit
-    if (weights.length < 1) return;
-    window.selected_layer = layer.name;
+    // Get layers, and set first layer to be initialy viewed:
+    var layers = _.filter(json.layers, function(l){return l.data.length >= 1});
+    var activeTab = _.isUndefined(activeTab) ? layers[0].type : activeTab;
 
     // Container Styles:
-    var container_attr = {class: "panel panel-default vis-layer"};
+    var container_attr  = {class: "panel panel-default vis-layer"};
     var container_style = {height: "100%", overflow: "auto", "line-height": "1px"};
-    var layerContainer = d3.select("#layerLayout").style({
-      display: "inline-block",
-      "text-align": "center"
-    });
+    var layerContainer  = d3.select("#layerLayout").style({display: "inline-block","text-align": "center"});
+    var titles = _.pluck(layers, "type");
 
-    // Setup container for given outputs
-    var container = layerContainer.append("div")
-      .attr(container_attr).style(container_style)
-      .attr("data-type", "Weights");
-
-    var outputContainer = container.append("div")
-      .style({display: "inline-block"});
-    // Draw outputs:
-    drawOutputs(outputContainer, weights);
-
-    // Show container holding all outputs for this layer:
-    layerContainer.style({
-      position: "relative",
-      top: -1*d3.select("#treeLayout").node().getBoundingClientRect().height + 'px'
-    });
-
-  });
-
-
-
-  return;
-  // Setup loading container
-  var loadingContainer = drawLoadingContainer("#loadingLayout");
-  d3.json(url, function(error, json) {
-    var selected_layers = json.data;
-
-    loadingContainer.html('');
-
-    // If clicked layer has no outputs then exit
-    if (selected_layers.length < 1) return;
-    window.selected_layer = layer.name;
-
-    // Container Styles:
-    var container_attr = {class: "panel panel-default vis-layer"};
-    var container_style = {height: "100%", overflow: "auto", "line-height": "1px"};
-    var layerContainer = d3.select("#layerLayout").style({
-      display: "inline-block",
-      "text-align": "center"
-    });
-
-    // Draw outputs inside the layerLayout div container:
-    _.each(selected_layers, function(outputs,i){
+    _.each(layers,function(layer){
+      var type = layer.type;
+      var data = layer.data;
 
       // Setup container for given outputs
       var container = layerContainer.append("div")
         .attr(container_attr).style(container_style)
-        .attr("data-type", outputs.vis_type);
-
-      // Hide all but first set of outputs at first:
-      if (_.isUndefined(activeTab)){
-        container.style("display", i == 0 ? "block" : "none");
-      }else {
-        container.style("display", outputs.vis_type == activeTab ? "block" : "none");
-      }
+        .attr("data-type", type)
+        .style("display", (type == activeTab ? "block" : "none"));
 
       // Draw titlebar:
-      buildTitlebar(container, selected_layers,outputs);
+      buildTitlebar(container, layers, layer);
 
-      var outputContainer = container.append("div")
-        .style({display: "inline-block"});
+      var outputContainer = container.append("div").style("display","inline-block");
+
       // Draw outputs:
-      drawOutputs(outputContainer, outputs.data);
+      drawOutputs(outputContainer, data);
+
     });
 
     // Show container holding all outputs for this layer:
@@ -483,8 +422,8 @@ function loadJob(item){
     // Add all images available for visualization to a image carousel
     // TODO: Create a image carousel/handling class:
     var carouselInner = d3.select("#imageCarousel .carousel-inner");
-    var canvasAttribtes = {height: 180, width: 180};
-    var canvasStyles    = {height: "180px", width: "180px"};
+    var canvasAttribtes = {height: 140, width: 140};
+    var canvasStyles    = {height: "140px", width: "140px"};
 
     _.each(json.images, function(image, i){
 
@@ -497,9 +436,9 @@ function loadJob(item){
 
       // Draw image onto canvas (as its currently saved as array)
       var ctx = canvas.node().getContext("2d");
-      ctx.clearRect(0, 0, 180,180);
+      ctx.clearRect(0, 0, 140,140);
       var grid_dim = image.img[0][0].length;
-      drawNeuron(image.img[0],ctx,180/grid_dim,180/grid_dim);
+      drawNeuron(image.img[0],ctx,140/grid_dim,140/grid_dim);
     });
 
   });
