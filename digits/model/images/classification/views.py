@@ -425,46 +425,56 @@ def load_pretrained_model():
     prototxt_path   = job_path+"deploy.prototxt"
     caffemodel_path = job_path+"model.caffemodel"
 
-    # Make this job the active job by moving into the output path
-    call(["cp", prototxt_path, outputs_path+"deploy.prototxt"])
-    call(["cp", caffemodel_path, outputs_path+"model.caffemodel"])
-
     # Get all the images stored for this job:
     f = h5py.File(job_path+'/activations.hdf5','a')
+
     image_data = []
     for key in f:
         image_data.append({"key": key , "img": f[key]['data'][:].tolist()})
 
+    # Get last backprop job:
+    b = h5py.File(job_path+'/backprops.hdf5','a')
+
+    if "0" in b:
+        backprop_info = {
+            "data": b["0"]["info"][:].tolist(),
+            "attrs": dict(b["0"]["info"].attrs.items())
+        }
+    else:
+        backprop_info = {}
+
     # Render new model def in view:
-    prototxt = open(job_path+"deploy.prototxt",'r').read()
-    return flask.jsonify({'data': {"prototxt": prototxt}, 'images': image_data})
+    prototxt = open(prototxt_path,'r').read()
+    return flask.jsonify({'data': {"prototxt": prototxt, "backprop": backprop_info}, 'images': image_data})
+
 
 @blueprint.route('/get_backprop_from_neuron_in_layer.json', methods=['POST'])
 @blueprint.route('/get_backprop_from_neuron_in_layer', methods=['POST', 'GET'])
 def get_backprop_from_neuron_in_layer():
     """
     Runs backprop from the a neuron in a specified layer
+    path <Args>         -- path to job
+    image_key <Args>    -- image_key in activations.h5py (0..N=num images)
+    layer_name <Args>   -- layer that neuron resides in
+    neuron_index <Args> -- index of selected neuron
     """
+
     # Get layer and neuron from inputs:
     delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
-    path          = "jobs/"+flask.request.args['path']  + "/"
+    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+
+    # Get params from flask args:
+    path          = o+"jobs/"+flask.request.args['path']
     layer_name    = str(flask.request.args['layer_name'])
     neuron_index  = str(flask.request.args['neuron_index'])
+    image_key     = str(flask.request.args['image_key'])
 
-    # Get the last saved image, prototxt, and caffemodel
-    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
-    image = o+"image.png"
-    prototxt = o+"deploy.prototxt"
-    caffemodel = o+"model.caffemodel"
+    # Run the backprop script:
+    p = Popen(["python", o+"get_backprops.py", path, layer_name, neuron_index])
+    p.wait()
 
-    # Run the backprop script
-    p = Popen(["python", o+"get_backprops.py", image, prototxt, caffemodel, layer_name, neuron_index]);p.wait()
-
-    # Return the outputs of the currently selected layer:
-    backprops_path  = o+"backprops/" + layer_name.translate(None,delchars)+".npy"
-    data = np.load(backprops_path)
-
-    return flask.jsonify({'data': data.tolist()})
+    # Return data for this layer:
+    return flask.jsonify(backprops(path,image_key,layer_name))
 
 
 @blueprint.route('/deconv_neuron_in_layer.json', methods=['POST'])
@@ -476,6 +486,7 @@ def deconv_neuron_in_layer():
     path <Args> -- path to job
     image_key <Args> --  key to image ("0" .. num of images in db)
     layer_name <Args> -- layer that neuron resides in
+    layer_type <Args> -- layer that neuron resides in
     neuron_index <Args> -- index of selected neuron
     """
     delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
@@ -486,7 +497,6 @@ def deconv_neuron_in_layer():
     image_key     = flask.request.args['image_key']
     layer_name    = str(flask.request.args['layer_name'])
     neuron_index  = str(flask.request.args['neuron_index'])
-
 
     # Run the deconvolution script
     p = Popen(["python", o+"get_deconv.py", path, image_key, layer_name, neuron_index])
@@ -509,11 +519,14 @@ def get_outputs():
     image_key <Args> --  key to image ("0" .. num of images in db)
     """
     path = os.path.abspath(digits.__path__[0])+"/layer_outputs/jobs/"+ str(flask.request.args['path'])+"/"
+    print "PATH:"
+    print path
     image_key  = flask.request.args['image_key']
     layer_name = flask.request.args['layer_name']
     layers = []
     layers.append({'type':'weights', 'data': weights(path,layer_name)})
     layers.append({'type':'activations', 'data': activations(path,image_key,layer_name)})
+    layers.append({'type':'backprops', 'data': backprops(path,image_key,layer_name)["data"]})
 
     return flask.jsonify({'layers': layers})
 
@@ -547,17 +560,53 @@ def get_activations():
 
     return flask.jsonify({'data': activations(path,image_key,layer_name)})
 
+@blueprint.route('/get_backprops.json', methods=['POST', 'GET'])
+@blueprint.route('/get_backprops',  methods=['POST', 'GET'])
+def get_backprops():
+    """
+    Return the activations for a specific layer and image
+    path <Args> -- path to job
+    layer_name <Args> -- name of layer
+    image_key <Args> --  key to image ("0" .. num of images in db)
+    """
+    # Get Path and Layer Name from input arguments:
+    path = os.path.abspath(digits.__path__[0])+"/layer_outputs/jobs/"+ str(flask.request.args['path'])+"/"
+    layer_name  = str(flask.request.args['layer_name'])
+    image_key   = str(flask.request.args['image_key'])
+
+    return flask.jsonify({'data': backprops(path,image_key,layer_name)["data"]})
+
+
+def backprops(path,image_key,layer_name):
+    # Read backprops file, and group containing activations for given image:
+    f = h5py.File(path+'/backprops.hdf5','a')
+    data = []
+    info = {}
+    if image_key in f:
+        if layer_name in f[image_key]:
+
+            s = int(f[image_key][layer_name].shape[1]/40 +1)
+            data = f[image_key][layer_name][:100,::s,::s].tolist()
+            info = {
+                "data":  f[image_key]["info"][:].tolist(),
+                "attrs": dict(f[image_key]["info"].attrs.items())
+            }
+
+    return {"data": data, "info":info}
+
 def activations(path,image_key,layer_name):
     # Read activations file, and group containing activations for given image:
     f = h5py.File(path+'activations.hdf5','r')
-    grp = f[image_key]
+
+    data = []
 
     # Return activations of first 100 neurons:
-    # TODO: Resolution should be an input parameter!
-    if layer_name in grp:
-        data = grp[layer_name][:100,::4,::4].tolist()
-    else:
-        data = []
+    # TODO: Resolution should be an input parameter
+    if image_key in f:
+        grp = f[image_key]
+        if layer_name in grp:
+            s = int(f[image_key][layer_name].shape[1]/40 +1)
+            data = grp[layer_name][:100,::s,::s].tolist()
 
     return data
 
@@ -645,7 +694,6 @@ def send_params():
     # Save Activations:
     p = Popen(["python", o+"get_activations.py", image_path, o_proto, o_caffmodel, o+"jobs/"+job_path])
     p.wait()
-
 
     call(["mv", image_path, "digits/layer_outputs/image.png"])
 

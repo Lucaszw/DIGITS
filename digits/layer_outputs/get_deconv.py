@@ -44,12 +44,6 @@ def write_deconv(job_path,image_key,layer_name, neuron_index):
     # Load image and perform a forward pass
     f = h5py.File(job_path+'/activations.hdf5','r')
     image = f[image_key]['data'][:][0]
-    print "IMAGE SHAPE:"
-    print image.shape
-
-    print "LAYER NAME:"
-    print layer_name
-
 
     transformed_image = transformer.preprocess('data', image)
     net.blobs['data'].data[...] = transformed_image

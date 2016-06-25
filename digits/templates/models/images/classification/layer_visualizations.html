@@ -86,15 +86,8 @@ body , html, .container, .row {
   window.base_url = "http://localhost:5000/models/images/classification/";
   window.pretrained = {{pretrained|tojson}}
 
-  function showUploader(){
-    // Setup model selector container:
-    drawModelSelection('#selectModelLayout');
-  }
 
   function imageIsLoaded(e) {
-    // d3.select("#myImg")
-    //   .attr("src", e.target.result)
-    //   .style("display","block");
 
     var loadingLayout = drawLoadingContainer("#loadingLayout");
 
@@ -159,19 +152,14 @@ body , html, .container, .row {
     }).append("span").attr("class","glyphicon glyphicon-chevron-right");
 
     $("#imageCarousel").carousel({ interval: false });
-    $('#imageCarousel').bind('slide.bs.carousel', function (e, b) {
+    $('#imageCarousel').bind('slide.bs.carousel', function (e) {
       window.selected_image = e.relatedTarget.dataset.key;
+      changeSelectedImage();
     });
-
-
-    // file_selecion.append("img")
-    //   .attr({id: "myImg",src: "#", class: "panel panel-default"})
-    //   .style({height: "130px", "margin": "0 auto 10px auto", "min-width": "100px", "max-width": "180px"});
 
     var inputContainer = file_selecion.append("span")
       .attr("class","btn btn-sm btn-primary btn-file")
       .style({display: "block", width: "150px", margin: "0 auto"});
-
 
     var listGroup = file_selecion.append("div")
       .style({
@@ -213,7 +201,7 @@ body , html, .container, .row {
     file_selecion.append("a")
       .attr("class","btn btn-default btn-sm")
       .style({position: "relative", top: "10px"})
-      .on("click", showUploader)
+      .on("click", function(){drawModelSelection('#selectModelLayout')})
       .html("Upload Pre-Trained Model");
 
     inputContainer.append("label")
@@ -257,7 +245,7 @@ body , html, .container, .row {
 
 </script>
 
-  <div class="row" style="display:inline;">
+  <div class="row">
 
     <form id="navigation" name="navigation" method="post" enctype="multipart/form-data"></form>
     <div id="treeLayout"></div>

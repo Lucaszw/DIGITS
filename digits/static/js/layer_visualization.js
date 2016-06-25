@@ -1,4 +1,4 @@
-var selected_image, selected_neuron, selected_layer, job_path;
+var selected_image, selected_neuron, selected_layer, selected_type, job_path;
 var load_default = true;
 // Default to faded red,yellow,green,blue as color map (only applies if greyscale data):
 var colormap = chroma.scale(['#541E8A','#3F84FE','#87BCFF','#4BD29F','#9AFFA2','#F3AC5A','#FF0000']).colors(255);
@@ -137,17 +137,32 @@ function drawOutputs(container,data){
   // panel styles:
   var output_style = {margin: "0px",height:h+"px", width:w+"px", position: "relative", cursor: "pointer"};
   var output_width = {height:h, width:w, class: "panel panel-default"};
-  var mouseover = {height: "85px", width: "85px", marginTop: "-15px", marginLeft: "-10px",
-              top: "5px", left: "5px", zIndex: 1, boxShadow: "0px 3px 13px 1px rgba(0,0,0,0.5)"};
-  var mouseout  = {height: "75px", width: "75px", marginTop: "auto", marginLeft: "auto",
-              top: "0px", left: "0px", zIndex: 0, boxShadow: "none"};
+
+  var mouseover = {
+    height: "85px",
+    width: "85px",
+    marginTop: "-15px",
+    marginLeft: "-10px",
+    top: "5px",
+    left: "5px",
+    zIndex: 1,
+    boxShadow: "0px 3px 13px 1px rgba(0,0,0,0.5)"
+  };
+
+  var mouseout  = {
+    height: "75px",
+    width: "75px",
+    marginTop: "auto",
+    marginLeft: "auto",
+    top: "0px",
+    left: "0px",
+    zIndex: 0,
+    boxShadow: "none"
+  };
 
 
   // iterate through each output
   _.each(data, function(output_data,i){
-
-    // draw a maximum of 2000 outputs (for better performance)
-    if (i > 2000) return;
 
     // initate a canvas to draw pixels in output on:
     var output_container = container.append("canvas")
@@ -159,10 +174,7 @@ function drawOutputs(container,data){
         _.extend(this.style,mouseout);
       })
       .on("click", function(){
-        var ctx = d3.select("#neuron_visualization").node().getContext("2d");
-        drawNeuron(output_data,ctx, 180/grid_dim,180/grid_dim);
-        window.selected_neuron = i;
-        showDeconv();
+        updateSelected(output_data,i);
       });
 
     var ctx = output_container.node().getContext("2d");
@@ -170,6 +182,14 @@ function drawOutputs(container,data){
 
   });
 
+}
+
+function updateSelected(data,neuron){
+  var grid_dim = data[0].length;
+  var ctx = d3.select("#neuron_visualization").node().getContext("2d");
+  drawNeuron(data,ctx, 180/grid_dim,180/grid_dim);
+  window.selected_neuron = neuron;
+  showDeconv();
 }
 
 function drawNeuron(output_data,ctx, pixel_w,pixel_h){
@@ -186,10 +206,11 @@ function drawNeuron(output_data,ctx, pixel_w,pixel_h){
       if (pixel.length == 3){
         rgb = "rgb("+_.map(pixel,function(n){return Math.floor(n*255)}).join()+")";
       }else {
-      // If grayscale , convert to rgb using declared color map
-      // use tanh scale, instead of linear scale to match pixel color
-      // for better visual appeal:
-        var c = 255*(Math.tanh(2*pixel));
+        // If grayscale , convert to rgb using declared color map
+        // use tanh scale, instead of linear scale to match pixel color
+        // for better visual appeal:
+        // var c = 255*(Math.tanh(2*pixel));
+        var c = 255*pixel;
         rgb = window.colormap[Math.floor(c)];
       }
 
@@ -202,24 +223,12 @@ function drawNeuron(output_data,ctx, pixel_w,pixel_h){
   });
 }
 
-function closePanel(){
-  d3.select("#layerLayout").style("display", "none").selectAll(".vis-layer").remove();
-}
 
-function showTab(vis_type){
-  // Change tab shown when visualizing outputs of a layer:
-  _.each(d3.selectAll(".vis-layer")[0], function(node){
-    var type = node.dataset.type;
-    d3.select(node)
-      .style("display", type == vis_type ? "block" : "none");
-  });
-}
 
 
 function drawLoadingContainer(selector){
-  closePanel();
   var box = d3.select("#treeLayout").node().getBoundingClientRect();
-  d3.select(selector).html('').append("div")
+  d3.select(selector).html('').style("display","block").append("div")
     .style({
       "margin-left": "210px",
       "text-align": "center",
@@ -229,88 +238,48 @@ function drawLoadingContainer(selector){
       padding:"10px 250px",
       background: "rgba(0,0,0,0.5)",
       position: "fixed",
+      "z-index":2
     })
     .append("span")
       .attr("class","glyphicon glyphicon-refresh glyphicon-spin");
   return d3.select(selector);
 }
 
-function buildTitlebar(container, layers, layer){
+function runBackprop() {
 
-  // Title Bar:
-  var titleBar  = container.append("div")
-    .style({
-      width: "100%",
-      height: "40px",
-      "margin-bottom": "2px",
-      "text-align": "center",
-      "border-bottom":"1px solid #D7D7D7",
-      background: "#F3F3F3"}
-    );
-
-  // Container Holding Nav Buttons:
-  var nav = titleBar.append("span")
-    .style("display","inline-block");
-
-  // Draw Nav Buttons in Nav Container:
-  _.each(layers, function(l){
-
-    var border_style = "1px solid " + (layer.type == l.type ? "#a7ecec" : "#E6E6E6");
-    var cursor_style = layer.type == l.type ? "default" : "pointer";
-    var bg_style     = layer.type == l.type ? "#d5ffff" : "#FFFFFF";
-    nav.append("div")
-      .attr("class", "panel btn panel-default")
-      .style({
-        "line-height": 1.0,
-        width: "90px",
-        height: "28px",
-        top: "5px",
-        position: "relative",
-      })
-      .on("click", function(){showTab(l.type)})
-      .style("cursor", cursor_style)
-      .style("background", bg_style)
-      .style("border", border_style)
-      .html(l.type)
+  var params = $.param({
+    layer_name: window.selected_layer,
+    neuron_index: window.selected_neuron,
+    path: window.job_path,
+    image_key: window.selected_image
   });
 
+  var url = window.base_url+"get_backprop_from_neuron_in_layer?"+params;
 
-  // Draw Close Button:
-  titleBar.append("div")
-    .attr("class", "panel btn btn-sm panel-default")
-    .style({
-      top: "5px",
-      right: "5px",
-      position: "relative",
-      float: "right"
-    })
-    .on("click",closePanel)
-    .append("span")
-      .attr("class", "glyphicon glyphicon-remove");
-
-}
-
-function runBackprop() {
-  var url = window.base_url+"get_backprop_from_neuron_in_layer?layer_name="+window.selected_layer+"&neuron_index="+window.selected_neuron+"&path="+window.job_path;
-  closePanel();
-  // Setup loading container
   var loadingContainer = drawLoadingContainer("#loadingLayout");
 
   d3.json(url, function(error, json) {
-    loadingContainer.html('');
-    showLayer({name: window.selected_layer}, "Backprop");
 
-    var canvas = d3.select("#locked_backprop_container").html('')
-      .style("display","block")
-      .append("canvas").attr({height: "180px", width: "180px"});
+    loadingContainer.style("display","none");
+    var nav = d3.select(".titlebar-nav");
 
-    var ctx = canvas.node().getContext("2d");
-    ctx.clearRect(0, 0, 180,180);
-    var grid_dim = json.data[window.selected_neuron].length;
-    drawNeuron(json.data[window.selected_neuron],ctx, 180/grid_dim,180/grid_dim);
+    // Remove old backprops data:
+    d3.selectAll(".vis-layer")
+      .filter(function(d){return d.type == "backprops"})
+      .remove();
 
-    d3.select("#backprop_layer").html("<b>Backprop Layer: "+window.selected_layer+" </b>");
-    d3.select("#backprop_output").html("<b>Output Number: "+window.selected_neuron+" </b>");
+    d3.selectAll(".vis-tab")
+      .filter(function(d){return d.type == "backprops"})
+      .remove();
+
+    // Update titlebar and container of layer layout:
+    updateTitlebar([{type: "backprops"}]);
+    changeActiveItemInTitlebar("backprops");
+    updateLayerData([{data: json.data, type: "backprops"}],"backprops");
+
+    // Draw backprop info:
+    updateBackpropInfo(json.info);
+
   });
 
 }
@@ -332,7 +301,6 @@ function showDeconv(){
       .style({position:"relative", top: "70px"});
 
   d3.json(url, function(error, json) {
-    console.log(json);
     var container = d3.select("#deconv_container").html('');
 
     var canvas = container.append("canvas").attr("id", "deconv_visualization");
@@ -348,55 +316,205 @@ function showDeconv(){
   });
 }
 
+
+function closePanel(){
+  window.selected_layer  = undefined;
+  window.selected_type   = undefined;
+  window.selected_neuron = undefined;
+
+  d3.select("#layerLayout").style("display", "none").selectAll(".vis-outputs").remove();
+}
+
+function showTabInTitlebar(type){
+  // Change tab shown when visualizing outputs of a layer:
+  _.each(d3.selectAll(".vis-layer")[0], function(node){
+    var t = node.dataset.type;
+    d3.select(node)
+      .style("display", type == t ? "inline-block" : "none");
+  });
+
+  changeActiveItemInTitlebar(type);
+
+}
+
+function updateTitlebar(data){
+  d3.select(".titlebar-nav").selectAll().data(data)
+  .enter()
+    .append("div").attr("class",function(d){
+      return "panel btn panel-default vis-tab"
+    })
+    .style({
+      "line-height": 1.0,
+      width: "90px",
+      height: "28px",
+      top: "5px",
+      position: "relative",
+    }).on("click", function(d){
+      showTabInTitlebar(d.type)
+    })
+    .html(function(d){return d.type});
+}
+
+function addItemToTitlebar(nav,type){
+  nav.append("div")
+    .attr("class", "panel btn panel-default"+" vis-tab vis-tab-"+type)
+    .style({
+      "line-height": 1.0,
+      width: "90px",
+      height: "28px",
+      top: "5px",
+      position: "relative",
+    })
+    .on("click", function(){
+      showTabInTitlebar(type)
+    })
+    .html(type);
+}
+
+function changeActiveItemInTitlebar(type){
+  window.selected_type = type;
+  var activeStyle = {
+    background: "#d5ffff",
+    cursor: "default",
+    border: "1px solid #a7ecec"
+  };
+
+  var defaultStyle = {
+    background: "#FFFFFF",
+    cursor: "pointer",
+    border: "1px solid #E6E6E6"
+  };
+
+  d3.selectAll(".vis-tab")
+    .style(defaultStyle);
+
+  d3.selectAll(".vis-tab")
+    .filter(function(d){return d.type == type})
+    .style(activeStyle);
+
+
+}
+
+function buildTitlebar(container, layers, layer){
+
+  // Title Bar:
+  var titleBar  = container.append("div")
+    .style({
+      width: "100%",
+      height: "40px",
+      "margin-bottom": "2px",
+      "text-align": "center",
+      "border-bottom":"1px solid #D7D7D7",
+      background: "#F3F3F3"}
+    );
+
+  // Container Holding Nav Buttons:
+  var nav = titleBar.append("span")
+    .attr("class", "titlebar-nav")
+    .style("display","inline-block");
+
+  // Draw Nav Buttons in Nav Container:
+  updateTitlebar(layers);
+  changeActiveItemInTitlebar(layer.type);
+
+  // Draw Close Button:
+  titleBar.append("div")
+    .attr("class", "panel btn btn-sm panel-default")
+    .style({
+      top: "5px",
+      right: "5px",
+      position: "relative",
+      float: "right"
+    })
+    .on("click",closePanel)
+    .append("span")
+      .attr("class", "glyphicon glyphicon-remove");
+
+}
+
+
 function showLayer(layer, activeTab){
   window.selected_layer = layer.name;
 
-  
-  var outputs_url  = window.base_url+"get_outputs?layer_name="+layer.name+"&path="+window.job_path+"&image_key="+window.selected_image;
+  var params = $.param({
+    layer_name: window.selected_layer,
+    path: window.job_path,
+    image_key: window.selected_image
+  });
+
+  var outputs_url  = window.base_url+"get_outputs?"+params;
+
+  var box = d3.select("#treeLayout").node().getBoundingClientRect();
 
   // Show loading container:
   var loadingContainer = drawLoadingContainer("#loadingLayout");
+
   d3.json(outputs_url, function(error, json) {
     // Hide loading container
     loadingContainer.html('');
+
     // Get layers, and set first layer to be initialy viewed:
     var layers = _.filter(json.layers, function(l){return l.data.length >= 1});
     var activeTab = _.isUndefined(activeTab) ? layers[0].type : activeTab;
 
+    // Container Attributes:
+    var container_attr  = {class: "panel panel-default vis-outputs"};
+
     // Container Styles:
-    var container_attr  = {class: "panel panel-default vis-layer"};
-    var container_style = {height: "100%", overflow: "auto", "line-height": "1px"};
-    var layerContainer  = d3.select("#layerLayout").style({display: "inline-block","text-align": "center"});
+    var container_style = {
+      margin: "0 auto",
+      height: "100%",
+      "line-height": "1px",
+      "overflow-x": "hidden"
+    };
+
+    // Show Layer Layout Above Tree Layout
+    var layerContainer  = d3.select("#layerLayout")
+      .style({
+        display: "block",
+        "text-align": "center",
+        position: "fixed",
+        height: box.height+"px",
+        width: box.width+"px",
+        top: box.top+"px"
+      });
+
     var titles = _.pluck(layers, "type");
 
-    _.each(layers,function(layer){
-      var type = layer.type;
-      var data = layer.data;
+    // Setup container for given outputs:
+    var container = layerContainer.append("div")
+      .attr(container_attr).style(container_style);
 
-      // Setup container for given outputs
-      var container = layerContainer.append("div")
-        .attr(container_attr).style(container_style)
-        .attr("data-type", type)
-        .style("display", (type == activeTab ? "block" : "none"));
+    // Draw titlebar:
+    buildTitlebar(container, layers, layers[0]);
 
-      // Draw titlebar:
-      buildTitlebar(container, layers, layer);
+    updateLayerData(layers,activeTab);
 
-      var outputContainer = container.append("div").style("display","inline-block");
-
-      // Draw outputs:
-      drawOutputs(outputContainer, data);
-
-    });
-
-    // Show container holding all outputs for this layer:
-    layerContainer.style({
-      position: "relative",
-      top: -1*d3.select("#treeLayout").node().getBoundingClientRect().height + 'px'
-    });
 
   });
 
+}
+
+function updateLayerData(layers,activeTab){
+
+  // Draw outputs for each layer type (weights, activations...)
+  d3.select(".vis-outputs").selectAll().data(layers).enter()
+    .append("div")
+      .attr("class","vis-layer")
+      .attr("data-type", function(l){return l.type})
+      .style("width", "100%")
+      .style("display",function(l){
+        return l.type == activeTab ? "inline-block" : "none";
+      })
+      .each(function(l){
+        drawOutputs(d3.select(this),l.data);
+      });
+
+  // Update which layers to show and hide on existing nodes:s
+  d3.selectAll(".vis-layer")
+    .style("display",function(l){
+      return l.type == activeTab ? "inline-block" : "none";
+    });
 }
 
 function loadJob(item){
@@ -441,5 +559,49 @@ function loadJob(item){
       drawNeuron(image.img[0],ctx,140/grid_dim,140/grid_dim);
     });
 
+    console.log(json.data.backprop);
+    // Draw info about last backpropagation task
+    updateBackpropInfo(json.data.backprop);
+
   });
+}
+
+function changeSelectedImage(){
+
+  if (_.isUndefined(window.selected_layer) || _.isUndefined(window.selected_type)) return;
+
+  var params = $.param({
+    layer_name: window.selected_layer,
+    image_key: window.selected_image,
+    path: window.job_path
+  });
+
+  var url = window.base_url+"get_"+window.selected_type+"?"+params;
+
+  d3.json(url, function(error, json){
+
+    d3.selectAll(".vis-layer")
+      .filter(function(d){return d.type == window.selected_type})
+      .remove();
+
+    updateLayerData([{data: json.data, type: window.selected_type}],window.selected_type);
+    updateSelected(json.data[window.selected_neuron],window.selected_neuron);
+
+  });
+}
+
+function updateBackpropInfo(info){
+  // Draw backprop information into the model visualizations pane:
+  var canvas = d3.select("#locked_backprop_container").html('')
+    .style("display","block")
+    .append("canvas").attr({height: "180px", width: "180px"});
+
+  var ctx = canvas.node().getContext("2d");
+  ctx.clearRect(0, 0, 180,180);
+  var grid_dim = info.data[0].length;
+
+  drawNeuron(info.data,ctx, 180/grid_dim,180/grid_dim);
+
+  d3.select("#backprop_layer").html("<b>Backprop Layer: "+info.attrs.layer+" </b>");
+  d3.select("#backprop_output").html("<b>Output Number: "+info.attrs.neuron+" </b>");
 }
