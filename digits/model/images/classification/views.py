@@ -519,8 +519,7 @@ def get_outputs():
     image_key <Args> --  key to image ("0" .. num of images in db)
     """
     path = os.path.abspath(digits.__path__[0])+"/layer_outputs/jobs/"+ str(flask.request.args['path'])+"/"
-    print "PATH:"
-    print path
+
     image_key  = flask.request.args['image_key']
     layer_name = flask.request.args['layer_name']
     layers = []
@@ -596,8 +595,7 @@ def backprops(path,image_key,layer_name):
 
 def activations(path,image_key,layer_name):
     # Read activations file, and group containing activations for given image:
-    f = h5py.File(path+'activations.hdf5','r')
-
+    f = h5py.File(path+'activations.hdf5','a')
     data = []
 
     # Return activations of first 100 neurons:
@@ -620,46 +618,6 @@ def weights(path,layer_name):
 
     return data
 
-
-@blueprint.route('/get_single_layer.json', methods=['POST', 'GET'])
-@blueprint.route('/get_single_layer',  methods=['POST', 'GET'])
-def get_single_layer():
-    """
-    Return blob and param data for a single layer
-    """
-    # Get array of characters not allowed in filenames (to be removed)
-    delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
-
-    # Get filename containing numpy data for given layer
-    layer_name  = str(flask.request.args['layer_name'])
-
-    file_name  = layer_name.translate(None,delchars)+".npy"
-
-    # Get location that the output data is stored
-    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
-
-    # Get location of filter output , and activation output
-    weights_path  = o+"params/" + file_name
-    activation_path  = o+"blobs/" + file_name
-    backprops_path   = o+"backprops/" + file_name
-
-    # Put weights and activations into an array
-    outputs = []
-
-    if os.path.exists(weights_path):
-        data = np.load(weights_path)
-        outputs.append({'name': layer_name, 'vis_type': 'Weights', 'data': data.tolist()[:100]})
-
-    if os.path.exists(activation_path):
-        data = np.load(activation_path)
-        outputs.append({'name': layer_name, 'vis_type': 'Activation', 'data': data.tolist()[:100]})
-
-    if os.path.exists(backprops_path):
-        data = np.load(backprops_path)
-        outputs.append({'name': layer_name, 'vis_type': 'Backprop', 'data': data.tolist()[:100]})
-
-    return flask.jsonify({'data': outputs})
-
 @blueprint.route('/send_params.json', methods=['POST', 'GET'])
 @blueprint.route('/send_params',  methods=['POST', 'GET'])
 def send_params():
@@ -668,11 +626,9 @@ def send_params():
     load_default <Args> -- true/false (should load from current task or folder)
     job_path     <Args> -- path of job to save outputs to
     """
-    model_job = job_from_request()
-
     # Set job path from flask input arguments
-    job_path   = flask.request.args['job_path']
-    pretrained = flask.request.args['load_default'] == 'false'
+    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
+    path = o+"jobs/"+ str(flask.request.args['path'])
 
     # Store image file temporarily:
     outfile = tempfile.mkstemp(suffix='.png')
@@ -680,41 +636,11 @@ def send_params():
     image_path = outfile[1]
     os.close(outfile[0])
 
-    o = os.path.abspath(digits.__path__[0])+"/layer_outputs/"
-    o_proto     = o + "deploy.prototxt"
-    o_caffmodel = o + "model.caffemodel"
-
-    if not pretrained:
-        caffemodel  = model_job.train_task().get_caffemodel()
-        prototxt    = model_job.train_task().get_depoly_prototxt()
-        p = Popen(["python", o+"generate_outputs.py", image_path, prototxt, caffemodel]);p.wait()
-    else:
-        p = Popen(["python", o+"generate_outputs.py", image_path, o_proto, o_caffmodel]);p.wait()
-
     # Save Activations:
-    p = Popen(["python", o+"get_activations.py", image_path, o_proto, o_caffmodel, o+"jobs/"+job_path])
+    p = Popen(["python", o+"get_activations.py", image_path, path])
     p.wait()
 
-    call(["mv", image_path, "digits/layer_outputs/image.png"])
-
-    delchars = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
-
-    formatted_data = []
-
-    net_params = np.load(o+"param_keys.npy")
-    net_blobs  = np.load(o+"blob_keys.npy")
-
-    for param in net_params:
-        path = o+"params/"+param.translate(None,delchars)+".npy"
-        data = np.load(path)
-        formatted_data.append({'name': param, 'vis_type': "Weights", 'data': data.tolist()})
-
-    for blob in net_blobs:
-        path = o+"blobs/"+blob.translate(None,delchars)+".npy"
-        data = np.load(path)
-        formatted_data.append({'name': blob, 'vis_type': "Activation", 'data': data.tolist()})
-
-    return flask.jsonify({'data': formatted_data[0]})
+    return flask.jsonify({'data': "success!"})
 
 @blueprint.route('/classify_one.json', methods=['POST'])
 @blueprint.route('/classify_one', methods=['POST', 'GET'])

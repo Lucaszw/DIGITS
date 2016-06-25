@@ -93,11 +93,9 @@ body , html, .container, .row {
 
     $('#navigation').ajaxForm();
     $('#navigation').ajaxSubmit({
-      url: window.base_url+"send_params?job_id={{model_job.id()}}&load_default="+window.load_default+"&job_path="+window.job_path,
+      url: window.base_url+"send_params?job_id={{model_job.id()}}&path="+window.job_path,
       success: function(json){
         loadingLayout.html('');
-        window.conv1data = json.conv1
-        window.outputs_data = json.data;
       }
     });
   };

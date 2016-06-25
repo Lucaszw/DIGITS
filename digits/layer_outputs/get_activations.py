@@ -16,9 +16,12 @@ sys.path.insert(0,"/home/lzeerwanklyn/Projects/caffes/caffe-nv/python")
 import caffe
 
 
-def get_activations(image_path,prototxt,caffemodel,output_path):
+def get_activations(image_path,output_path):
     caffe.set_device(0)
     caffe.set_mode_gpu()
+
+    prototxt   = output_path+"/deploy.prototxt"
+    caffemodel = output_path+"/model.caffemodel"
 
     net = caffe.Net(prototxt,caffemodel,caffe.TEST)
     transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
@@ -49,12 +52,6 @@ if __name__ == '__main__':
     parser.add_argument('image_path',
             help='path to input image (.jpg, .png, ...)')
 
-    parser.add_argument('prototxt',
-            help='deploy.prototxt file location')
-
-    parser.add_argument('caffemodel',
-            help='***.caffemodel file location')
-
     parser.add_argument('output_path',
             help='folder to write outputs to')
 
@@ -63,8 +60,6 @@ if __name__ == '__main__':
     try:
         get_activations(
             args['image_path'],
-            args['prototxt'],
-            args['caffemodel'],
             args['output_path']
             )
     except Exception as e:
