@@ -539,7 +539,7 @@ function loadJob(item){
 
     // Add all images available for visualization to a image carousel
     // TODO: Create a image carousel/handling class:
-    var carouselInner = d3.select("#imageCarousel .carousel-inner");
+    var carouselInner = d3.select("#imageCarousel .carousel-inner").html('');
     var canvasAttribtes = {height: 140, width: 140};
     var canvasStyles    = {height: "140px", width: "140px"};
 
