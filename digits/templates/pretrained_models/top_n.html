@@ -1,0 +1,41 @@
+<h5 class="text"><b>Top N Predictions</b></h5>
+
+<div class="form-group">
+    <div for="image_list" class="control-div text">Upload Image List</div>
+    <input type="file" id="image_list" name="image_list" class="form-control input-sm ">
+    <div class="subtle">Accepts a list of filenames or urls (you can use your val.txt file)</div>
+</div>
+<div class="form-group">
+    <div for="image_folder" class="control-div text">Image folder <i>(optional)</i></div>
+    <input type="text" id="image_folder" name="image_folder" class="form-control  input-sm autocomplete_path">
+    <div class="subtle">Relative paths in the text file will be prepended with this value before reading</div>
+</div>
+<div class="form-group">
+    <div for="num_test_images" class="control-div text">Number of images use from the file</div>
+    <input type="text" id="num_test_images" name="num_test_images" class="form-control input-sm " placeholder="All">
+    <div class="subtle">Leave blank to use all</div>
+</div>
+
+<span name="classify-many-explanation"
+    class="explanation-tooltip glyphicon glyphicon-question-sign"
+    data-container="body"
+    title="Classify a list of images and show the top 5 category predictions for each."
+    ></span>
+<div class="form-group">
+    <div for="top_n" class="control-div text">Number of images to show per category</div>
+    <input type="text" id="top_n" name="top_n" class="form-control input-sm " placeholder="9">
+</div>
+<button name="top-n-btn"
+    formaction="{{url_for('digits.model.images.classification.views.top_n', job_id=job.id())}}"
+    formmethod="post"
+    formenctype="multipart/form-data"
+    formtarget="_blank"
+    class="btn btn-primary btn-sm"
+    style="background: #4ea4e0">
+    Top N Predictions per Category
+</button>
+<span name="top-n-explanation"
+    class="explanation-tooltip glyphicon glyphicon-question-sign"
+    data-container="body"
+    title="Classify a list of images and show the top N results per category by confidence."
+    ></span>

@@ -1,0 +1,44 @@
+<form method="post" enctype="multipart/form-data"
+  action="{{url_for('digits.pretrained_model.views.classify_one', job_id=job.id())}}">
+
+  <h5 class="text"><b>Test a single image</b></h5>
+
+  <div class="form-group">
+      <span for="image_path" class="control-div">Image Path</span>
+      <span name="image_path_explanation"
+          class="explanation-tooltip glyphicon glyphicon-question-sign"
+          data-container="body"
+          title="Can be a path on the server's filesystem, or a URL."
+          ></span>
+      <input type="text" id="image_path" name="image_path" class="input-sm form-control autocomplete_path">
+  </div>
+
+  <div class="form-group">
+      <div for="image_file" class="control-div">Upload image</div>
+      <input type="file" id="image_file" name="image_file" class="input-sm form-control">
+  </div>
+
+  <script type="text/javascript">
+      // When you fill in one field, the other gets blanked out
+      $("#image_path").change(function() { $("#image_file").val(""); });
+      $("#image_file").change(function() { $("#image_path").val(""); });
+  </script>
+
+  <div class="form-group">
+      <span for="show_visualizations">
+          <input id="show_visualizations" name="show_visualizations" type="checkbox" value="y">
+          <span class="subtle" style="position:relative;top:-2px;">Show visualizations and statistics</span>
+      </span>
+      <span name="show_visualizations_explanation"
+          class="explanation-tooltip glyphicon glyphicon-question-sign"
+          data-container="body"
+          title="For each layer in the network, show statistics for the weights/activations and attempt to represent the data visually. Can delay classification considerably."
+          ></span>
+  </div>
+
+  <button name="classify-one-btn"
+      class="btn btn-primary btn-sm"
+      style="background: #4ea4e0">
+      Classify One
+  </button>
+</form>

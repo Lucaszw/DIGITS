@@ -20,6 +20,7 @@ from .dataset import DatasetJob
 from .job import Job
 from .log import logger
 from .model import ModelJob
+from .pretrained_model import PretrainedModelJob
 from .status import Status
 from digits.utils import errors
 
@@ -144,7 +145,7 @@ class Scheduler:
 
         # add DatasetJobs
         for job in loaded_jobs:
-            if isinstance(job, DatasetJob):
+            if isinstance(job, DatasetJob) or isinstance(job,PretrainedModelJob):
                 self.jobs[job.id()] = job
 
         # add ModelJobs

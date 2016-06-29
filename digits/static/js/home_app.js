@@ -93,7 +93,9 @@
                     }
                 }
 
-                $scope.jobs = [].concat(response.data.running, response.data.datasets, response.data.models);
+
+                var r = response.data;
+                $scope.jobs = [].concat(r.running, r.datasets, r.models, r.pretrained_models);
 
                 var scope = angular.element(document.getElementById("models-table")).scope();
                 // scope.storage.model_output_fields = [];
@@ -130,6 +132,10 @@
 
         $scope.is_model = function(job) {
             return (!$scope.is_running(job) && job.type == 'model');
+        }
+
+        $scope.is_pretrained_model = function(job) {
+            return (!$scope.is_running(job) && job.type == 'pretrained_model');
         }
 
         $scope.set_attribute = function(job_id, name, value) {
@@ -647,6 +653,8 @@
 })();
 
 $(document).ready(function() {
+    var pretrainedModel = new PretrainedModel({url: $("#uploadPretrainedModel").attr("href")});
+    $("#uploadPretrainedModel").on("click", pretrainedModel.render);
 
     // Ideally this should be handled with an angularjs directive, but
     // for now is a global click event.

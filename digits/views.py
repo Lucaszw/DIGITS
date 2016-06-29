@@ -15,7 +15,7 @@ import werkzeug.exceptions
 from .config import config_value
 from .webapp import app, socketio, scheduler
 import digits
-from digits import dataset, extensions, model, utils
+from digits import dataset, extensions, model, utils, pretrained_model
 from digits.log import logger
 from digits.utils.routing import request_wants_json
 
@@ -78,6 +78,12 @@ def home():
                     'title': 'Other',
                     'url': flask.url_for(
                         'digits.model.images.generic.views.new'),
+                    },
+                'pretrained-model': {
+                    'title': 'Upload Pretrained Model',
+                    'id': 'uploadPretrainedModel',
+                    'url': flask.url_for(
+                        'digits.pretrained_model.views.new'),
                     },
                 },
             }
@@ -172,7 +178,8 @@ def json_dict(job, model_output_fields):
         d.update({ 'type': 'dataset' })
     if isinstance(job, model.ModelJob):
         d.update({ 'type': 'model' })
-
+    if isinstance(job, pretrained_model.PretrainedModelJob):
+        d.update({ 'type': 'pretrained_model' })
     return d
 
 @blueprint.route('/completed_jobs.json', methods=['GET'])
@@ -188,12 +195,14 @@ def completed_jobs():
     completed_models    = get_job_list(model.ModelJob, False)
     running_datasets  = get_job_list(dataset.DatasetJob, True)
     running_models    = get_job_list(model.ModelJob, True)
+    pretrained_models = get_job_list(pretrained_model.PretrainedModelJob,False)
 
     model_output_fields = set()
     data = {
         'running': [json_dict(j, model_output_fields) for j in running_datasets + running_models],
         'datasets': [json_dict(j, model_output_fields) for j in completed_datasets],
         'models': [json_dict(j, model_output_fields) for j in completed_models],
+        'pretrained_models': [json_dict(j, model_output_fields) for j in pretrained_models],
         'model_output_fields': sorted(list(model_output_fields)),
     }
 
@@ -276,6 +285,8 @@ def show_job(job_id):
         return flask.redirect(flask.url_for('digits.dataset.views.show', job_id=job_id))
     if isinstance(job, model.ModelJob):
         return flask.redirect(flask.url_for('digits.model.views.show', job_id=job_id))
+    if isinstance(job, pretrained_model.PretrainedModelJob):
+        return flask.redirect(flask.url_for('digits.pretrained_model.views.show', job_id=job_id))
     else:
         raise werkzeug.exceptions.BadRequest('Invalid job type')
 

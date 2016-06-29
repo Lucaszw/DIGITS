@@ -1,0 +1,65 @@
+{# Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved. #}
+{% extends "layout.html" %}
+{% from "helper.html" import serve_file %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/pretrained_models/show.js') }}"></script>
+{% endblock %}
+
+{% block nav %}
+<li><a href="{{url_for('digits.pretrained_model.views.show', job_id=job.id())}}">{{job.name()}}</a></li>
+{% endblock %}
+
+{% block content %}
+<style>
+  .container-inner {
+    padding-top: 20px;
+  }
+  @media (max-width: 768px){
+    .container-inner {padding-top:190px;}
+  }
+
+  .title {
+    font-size:20px;
+    font-weight: bold;
+    color: rgba(0,0,0,0.9);
+  }
+  .text {
+    font-size: 13px;
+    word-break: break-all;
+    color: rgba(0,0,0,0.8);
+  }
+  .subtle {
+    color: rgba(0,0,0,0.5);
+    font-style: italic;
+    font-size: 12px;
+  }
+
+</style>
+
+<div class="container-inner" >
+  <div class="row">
+    <div class="col col-md-8 col-norm">
+      <!-- Title -->
+      <div class="title">{{job.name()}}</div>
+      {% if job.username %}
+      <small>Owner: {{job.username}}</small>
+      {% endif %}
+    </div>
+
+    <div class="col col-status col-md-4 col-norm text">
+      <!-- Job Information -->
+      <b>Job Directory:</b>
+      <div class="subtle">{{ job.dir() }}</div>
+      <b>Disk Size:</b>
+      <div class="subtle">{{job.disk_size_fmt()}}</div>
+    </div>
+
+  </div>
+  <div class="row">
+    <div class="col col-md-4 text col-tall">{% include "pretrained_models/test_single.html" %}</div>
+    <div class="col col-md-4 text col-tall">{% include "pretrained_models/test_many.html" %}</div>
+    <div class="col col-md-4 text col-tall">{% include "pretrained_models/top_n.html" %}</div>
+  </div>
+</div>
+{% endblock %}
