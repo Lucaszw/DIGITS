@@ -5,7 +5,7 @@ var PretrainedModel = function(props){
   var self = this;
   var _url = $SCRIPT_ROOT+"/models/images/visualizations/new";
 
-  self.size      = 350;
+  self.size      = 450;
   self.url       = _.isUndefined(props.url) ? _url : props.url;
   self.container = null;
   self.form      = null;
@@ -56,6 +56,8 @@ var PretrainedModel = function(props){
     self.input(self.form,"file","deploy.prototxt", "prototxt_file");
     self.input(self.form,"file","***.caffemodel", "caffemodel_file");
     self.input(self.form,"text","Jobname", "job_name");
+    self.form.append("h6").html("Optional:");
+    self.input(self.form,"file","Labels file", "labels_file");
 
     self.form.append("button").attr({type: "submit",class: "btn btn-default"})
       .on("click",self.submit)

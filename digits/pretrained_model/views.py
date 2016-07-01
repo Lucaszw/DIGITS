@@ -1,49 +1,104 @@
 import flask
 import tempfile
 import os
+import h5py
+import numpy as np
 from digits import dataset, extensions, model, utils
 from digits.webapp import app, scheduler
 from digits.pretrained_model import PretrainedModelJob
+from digits.visualizations.jobs import PretrainedModelInferenceJob
 from digits.utils.routing import request_wants_json, job_from_request
+from digits import utils
 import werkzeug.exceptions
 
 blueprint = flask.Blueprint(__name__, __name__)
 
 
-@blueprint.route('/classify_one.json', methods=['POST'])
+def get_data(group):
+    data = []
+    for key in group.keys():
+        if type(group[key]).__name__ is "Group":
+            data += get_data(group[key])
+        else:
+            data.append({
+                "data": utils.image.embed_image_html(group[key][:]),
+                "attrs": dict(group[key].attrs.items())
+                })
+
+    return data
+
+def activations_as_html(job_dir):
+
+    f = h5py.File(job_dir+'/activations.hdf5','r')
+    images = []
+
+    for i in f.keys():
+        grp = f[i]
+        predictions = grp.attrs["predictions"]
+        activations = get_data(grp)
+        activations.sort(key= lambda item: item["attrs"]["i"])
+        images.append({
+        "predictions": predictions,
+        "data": activations
+        })
+        # images.append(sorted(activations, key=lambda k: int(k["attrs"]['i'])))
+    return images
+
+def weights_as_html(job_dir):
+
+    f = h5py.File(job_dir+'/weights.hdf5','r')
+    weights = get_data(f)
+    weights.sort(key=lambda item: item["attrs"]["i"])
+    return weights
+
+def get_tempfile(file, suffix):
+    temp = tempfile.mkstemp(suffix=suffix)
+    file.save(temp[1])
+    path = temp[1]
+    os.close(temp[0])
+    return path
+
 @blueprint.route('/classify_one', methods=['POST', 'GET'])
 def classify_one():
+
     model_job = job_from_request()
 
-    return str(isinstance(model_job, PretrainedModelJob))
+    if flask.request.method == "POST":
 
-    if 'image_path' in flask.request.form and flask.request.form['image_path']:
-        image_path = flask.request.form['image_path']
-    elif 'image_file' in flask.request.files and flask.request.files['image_file']:
-        outfile = tempfile.mkstemp(suffix='.png')
-        flask.request.files['image_file'].save(outfile[1])
-        image_path = outfile[1]
-        os.close(outfile[0])
-        remove_image_path = True
-    else:
-        raise werkzeug.exceptions.BadRequest('must provide image_path or image_file')
+        if 'image_path' in flask.request.form and flask.request.form['image_path']:
+            image_path = flask.request.form['image_path']
+        elif 'image_file' in flask.request.files and flask.request.files['image_file']:
+            outfile = tempfile.mkstemp(suffix='.png')
+            flask.request.files['image_file'].save(outfile[1])
+            image_path = outfile[1]
+            os.close(outfile[0])
+            remove_image_path = True
+        else:
+            raise werkzeug.exceptions.BadRequest('must provide image_path or image_file')
 
-    layers = 'none'
-    if 'show_visualizations' in flask.request.form and flask.request.form['show_visualizations']:
-        layers = 'all'
-
-    # create inference job
-    inference_job = ImageInferenceJob(
-        username    = utils.auth.get_username(),
-        name        = "Classify One Image",
-        model       = model_job,
-        images      = [image_path],
-        epoch       = None,
-        layers      = layers
+        inference_job = PretrainedModelInferenceJob(
+            model_job,
+            [image_path],
+            name     = "Classify One Image",
+            username = utils.auth.get_username()
         )
+        scheduler.add_job(inference_job)
+        inference_job.wait_completion()
+        scheduler.delete_job(inference_job)
+
+    activations = activations_as_html(model_job.dir())[0]
+    predictions = activations["predictions"]
+
+    weights     = weights_as_html(model_job.dir())
+    activations = activations["data"]
 
 
-    return flask.request.files.tolist()
+    return flask.render_template('visualizations/inference/classify_one.html',
+            model_job   = model_job,
+            weights     = weights,
+            activations = activations,
+            predictions = predictions
+            )
 
 @blueprint.route('/<job_id>.json', methods=['GET'])
 @blueprint.route('/<job_id>', methods=['GET'])
@@ -71,22 +126,20 @@ def new():
     Upload a pretrained model
     """
 
-    # Create a temporary file to hold prototxt and caffemodel:
-    prototxt = tempfile.mkstemp(suffix='.prototxt')
-    flask.request.files['prototxt_file'].save(prototxt[1])
-    prototxt_path = prototxt[1]
-    os.close(prototxt[0])
+    prototxt_path = get_tempfile(flask.request.files['prototxt_file'],".prototxt")
+    caffemodel_path = get_tempfile(flask.request.files['caffemodel_file'],".caffemodel")
 
-    caffemodel = tempfile.mkstemp(suffix='.caffemodel')
-    flask.request.files['caffemodel_file'].save(caffemodel[1])
-    caffemodel_path = caffemodel[1]
-    os.close(caffemodel[0])
+    labels_path = None
+
+    if str(flask.request.files['labels_file'].filename) is not '':
+        labels_path = get_tempfile(flask.request.files['labels_file'],".txt")
 
     job = PretrainedModelJob(
         prototxt_path,
         caffemodel_path,
+        labels_path,
         username = utils.auth.get_username(),
-        name = flask.request.form['job_name']
+        name = flask.request.form['job_name'],
     )
 
 

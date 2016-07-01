@@ -1,0 +1,163 @@
+{# Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved. #}
+{% extends "layout.html" %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/pretrained_models/show.js') }}"></script>
+{% endblock %}
+
+{% block nav %}
+<li><a href="{{url_for('digits.pretrained_model.views.show', job_id=model_job.id())}}">Classify One</a></li>
+<li class="active"><a>Classify One</a></li>
+{% endblock %}
+
+
+{% block content %}
+
+<script src="{{ url_for('static', filename='js/jquery.elevateZoom.min.js') }}"></script>
+
+<script type="text/javascript">
+    function drawHistogram(id, data) {
+        c3.generate({
+            bindto: id,
+            size: {height: 200},
+            data: {
+                columns: [
+                    ['Count'].concat(data[0]),
+                    ['Value'].concat(data[1]),
+                ],
+                x: 'Value',
+                type: 'area-spline',
+            },
+            axis: {
+                x: {
+                    label: {
+                        text: 'Value',
+                        position: 'outer-center',
+                    },
+                    tick: {
+                        values: data[2],
+                        format: d3.format('.3g'),
+                    },
+                    padding: {left: 0},
+                },
+                y: {
+                    padding: {bottom: 0},
+                },
+            },
+            bar: {
+               width: {ratio: 0.2}
+            },
+            padding: {left: 20, right: 20},
+            legend: {hide: true},
+        });
+    }
+</script>
+<style>
+div.histogram .c3-axis-y .tick {
+    display: none;
+}
+</style>
+
+<div class="container-inner" >
+    <div class="row">
+      <div class="col col-md-12 col-norm center">
+        <!-- Title -->
+        <div class="title">Classify One</div>
+        {% if model_job.username %}
+        <small>Owner: {{model_job.username}}</small>
+        {% endif %}
+      </div>
+    </div>
+    <div class="row">
+    <div class="col col-md-9 col-norm center">
+      <!-- Title -->
+      <div class="title">{{model_job.name()}}</div>
+      <small>{{model_job.job_type()}}</small>
+    </div>
+
+
+      <div class="col col-status col-md-3 col-norm center">
+        <!-- Job Information -->
+        <b>Job Directory:</b>
+        <div class="subtle">{{ model_job.dir() }}</div>
+        <b>Disk Size:</b>
+        <div class="subtle">{{model_job.disk_size_fmt()}}</div>
+      </div>
+    </div>
+    <div class="row title text-center" style="color: rgba(0,0,0,0.2)">
+      <div class=" col-md-4 col-small center">Description</div>
+      <div class=" col-md-4 col-small center">Statistics</div>
+      <div class=" col-md-4 col-small center">Visualization</div>
+    </div>
+    <script>
+      var histograms = new Array();
+
+      {% if predictions != "" %}
+        var predictions = JSON.parse({{predictions|tojson}});
+      {% endif %}
+
+      $(document).ready(function(){
+        _.each(histograms, function(histogram, index){
+          var container = d3.select("#histogram-"+index + " .col-content").append("div");
+
+          var chart = c3.generate({
+              bindto: container.node(),
+              size: {height: 170, width: 170},
+              data: {
+                columns: [
+                  ['Count'].concat(histogram.y),
+                  ['Value'].concat(histogram.x),
+                ],
+                x: 'Value',
+                type: 'area-spline'
+              },
+              axis: {
+                  x: {
+                      label: {
+                          text: 'Value',
+                          position: 'outer-center',
+                      },
+                      tick: {
+                          values: histogram.ticks,
+                          format: d3.format('.3g'),
+                      },
+                      padding: {left: 0},
+                  },
+                  y: {
+                      padding: {bottom: 0},
+                      show: false
+                  },
+              },
+              bar: {
+                 width: {ratio: 0.2}
+              },
+              legend: {hide: true},
+          });
+
+        });
+      });
+    </script>
+
+    {% for activation in activations %}
+    <div class="panel panel-default row text-center " style="padding:15px;">
+      <div class="col col-nopanel center col-md-4 col-big">
+        <h4>{{activation["attrs"]["name"]}}</h4>
+        <div class="subtle">{{activation["attrs"]["type"]}}</div>
+      </div>
+      <div id="histogram-{{loop.index}}"class="col col-nopanel col-md-4 col-big text">
+        Shape: <b>{{activation["attrs"]["shape"]}}</b><br/>
+        Mean: <b>{{activation["attrs"]["shape"]}}</b><br/>
+        Std Deviation: <b>{{activation["attrs"]["stddev"]}}</b>
+      </div>
+      <div class="col col-nopanel col-md-4 col-big" style="border-radius:1.2px;">
+        <img class="panel panel-default" src="{{activation["data"]}}" height=200 />
+        <!-- <div class="panel panel-default" style="background-size: auto 200px;background-repeat: no-repeat;background-image: url({{activation["data"]}}); height: 200px; overflow: hidden; width: 100%;"></div> -->
+      </div>
+    </div>
+    <script>histograms.push(JSON.parse({{activation["attrs"]["histogram"]|tojson}}))</script>
+    {% endfor %}
+</div>
+
+
+
+{% endblock %}

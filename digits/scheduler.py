@@ -143,7 +143,7 @@ class Scheduler:
                 except Exception as e:
                     failed_jobs.append((dir_name, e))
 
-        # add DatasetJobs
+        # add DatasetJobs or PretrainedModelJobs
         for job in loaded_jobs:
             if isinstance(job, DatasetJob) or isinstance(job,PretrainedModelJob):
                 self.jobs[job.id()] = job

@@ -13,14 +13,22 @@ class PretrainedModelJob(Job):
     A Job that uploads a pretrained model
     """
 
-    def __init__(self, prototxt_path,caffemodel_path,**kwargs):
+    def __init__(self, prototxt_path,caffemodel_path,labels_path=None,**kwargs):
         super(PretrainedModelJob, self).__init__(persistent = False, **kwargs)
+
+        self.has_labels = True
+
+        if labels_path is None:
+            self.has_labels = False
+
         self.tasks = []
         self.tasks.append(UploadPretrainedModelTask(
             prototxt_path,
             caffemodel_path,
+            labels_path,
             job_dir=self.dir()
         ))
+
 
     def get_deploy_prototxt(self):
         return self.dir()+"/deploy.prototxt"
@@ -29,8 +37,12 @@ class PretrainedModelJob(Job):
         return self.dir()+"/model.caffemodel"
 
     @override
+    def job_type(self):
+        return "Pretrained Model"
+
+    @override
     def __getstate__(self):
-        fields_to_save = ['_id', '_name', 'username', 'tasks', 'status_history']
+        fields_to_save = ['_id', '_name', 'username', 'tasks', 'status_history', 'has_labels']
         full_state = super(PretrainedModelJob, self).__getstate__()
         state_to_save = {}
         for field in fields_to_save:

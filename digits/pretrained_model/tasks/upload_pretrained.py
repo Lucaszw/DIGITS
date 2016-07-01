@@ -22,7 +22,7 @@ class UploadPretrainedModelTask(Task):
     A task for uploading pretrained models
     """
 
-    def __init__(self, prototxt_path, caffemodel_path, **kwargs):
+    def __init__(self, prototxt_path, caffemodel_path, labels_path=None, **kwargs):
         """
         Arguments:
         prototxt_path -- path to deploy.prototxt
@@ -31,7 +31,7 @@ class UploadPretrainedModelTask(Task):
         # memorize parameters
         self.prototxt_path = prototxt_path
         self.caffemodel_path = caffemodel_path
-
+        self.labels_path = labels_path
         # resources
         self.gpu = None
 
@@ -70,11 +70,17 @@ class UploadPretrainedModelTask(Task):
                 return reserved_resources
         return None
 
+    def move_file(self,input, output):
+        args  = ["mv", input, self.job_dir+"/"+output]
+        p = subprocess.Popen(args)
+
     @override
     def run(self, resources):
         env = os.environ.copy()
-        args1  = ["mv", self.prototxt_path, self.job_dir+"/deploy.prototxt"]
-        args2  = ["mv", self.caffemodel_path, self.job_dir+"/model.caffemodel"]
-        p = subprocess.Popen(args1)
-        p = subprocess.Popen(args2)
+        self.move_file(self.prototxt_path, "deploy.prototxt")
+        self.move_file(self.caffemodel_path, "model.caffemodel")
+
+        if self.labels_path is not None:
+            self.move_file(self.labels_path, "labels.txt")
+
         self.status = Status.DONE

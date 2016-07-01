@@ -11,35 +11,10 @@
 {% endblock %}
 
 {% block content %}
-<style>
-  .container-inner {
-    padding-top: 20px;
-  }
-  @media (max-width: 768px){
-    .container-inner {padding-top:190px;}
-  }
-
-  .title {
-    font-size:20px;
-    font-weight: bold;
-    color: rgba(0,0,0,0.9);
-  }
-  .text {
-    font-size: 13px;
-    word-break: break-all;
-    color: rgba(0,0,0,0.8);
-  }
-  .subtle {
-    color: rgba(0,0,0,0.5);
-    font-style: italic;
-    font-size: 12px;
-  }
-
-</style>
 
 <div class="container-inner" >
-  <div class="row">
-    <div class="col col-md-8 col-norm">
+
+    <div class="col col-md-9 col-norm center">
       <!-- Title -->
       <div class="title">{{job.name()}}</div>
       {% if job.username %}
@@ -47,7 +22,7 @@
       {% endif %}
     </div>
 
-    <div class="col col-status col-md-4 col-norm text">
+    <div class="col col-status col-md-3 col-norm center">
       <!-- Job Information -->
       <b>Job Directory:</b>
       <div class="subtle">{{ job.dir() }}</div>
@@ -55,11 +30,9 @@
       <div class="subtle">{{job.disk_size_fmt()}}</div>
     </div>
 
-  </div>
-  <div class="row">
-    <div class="col col-md-4 text col-tall">{% include "pretrained_models/test_single.html" %}</div>
-    <div class="col col-md-4 text col-tall">{% include "pretrained_models/test_many.html" %}</div>
-    <div class="col col-md-4 text col-tall">{% include "pretrained_models/top_n.html" %}</div>
-  </div>
+    <div class="col col-md-4 col-tall">{% include "pretrained_models/test_single.html" %}</div>
+    <div class="col col-md-4 col-tall">{% include "pretrained_models/test_many.html" %}</div>
+    <div class="col col-md-4 col-tall">{% include "pretrained_models/top_n.html" %}</div>
+
 </div>
 {% endblock %}

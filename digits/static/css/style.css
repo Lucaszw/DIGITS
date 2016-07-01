@@ -10,6 +10,29 @@ dl dd {
     word-wrap: break-word;
 }
 
+@media (max-width: 768px){
+  .container-inner {padding-top:190px;}
+}
+
+.title {
+  font-size:23px;
+  font-weight: bold;
+  color: rgba(0,0,0,0.9);
+}
+
+.container-inner {
+  padding-top: 20px;
+  font-size: 13px;
+  word-break: break-all !important;
+  color: rgba(0,0,0,0.8);
+}
+
+.subtle {
+  color: rgba(0,0,0,0.5);
+  font-style: italic;
+  font-size: 12px;
+}
+
 div.progress div.progress-bar {
     min-width: 20px;
 }
