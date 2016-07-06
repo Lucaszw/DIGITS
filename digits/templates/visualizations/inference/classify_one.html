@@ -15,6 +15,12 @@
 
 <script src="{{ url_for('static', filename='js/jquery.elevateZoom.min.js') }}"></script>
 
+<style>
+.list-group-item {
+    padding: 7.25px 10px;
+}
+</style>
+
 <script type="text/javascript">
     function drawHistogram(id, data) {
         c3.generate({
@@ -60,29 +66,36 @@ div.histogram .c3-axis-y .tick {
 
 <div class="container-inner" >
     <div class="row">
-      <div class="col col-md-12 col-norm center">
+      <div class="col col-md-6 col-norm center">
         <!-- Title -->
         <div class="title">Classify One</div>
         {% if model_job.username %}
         <small>Owner: {{model_job.username}}</small>
         {% endif %}
       </div>
+
+      <div class="col col-md-6 col-norm center">
+        <!-- Title -->
+        <div class="title">{{model_job.name()}}</div>
+        <small>{{model_job.job_type()}}</small>
+      </div>
+
+
     </div>
     <div class="row">
-    <div class="col col-md-9 col-norm center">
-      <!-- Title -->
-      <div class="title">{{model_job.name()}}</div>
-      <small>{{model_job.job_type()}}</small>
-    </div>
 
+        <ul id="predictions" class="col col-nopanel col-md-8 col-big center">
+          <li class="list-group-item"><b>Top 5 Predictions</b></li>
+        </ul>
 
-      <div class="col col-status col-md-3 col-norm center">
+      <div class="col col-status col-md-4 col-big center">
         <!-- Job Information -->
         <b>Job Directory:</b>
         <div class="subtle">{{ model_job.dir() }}</div>
         <b>Disk Size:</b>
         <div class="subtle">{{model_job.disk_size_fmt()}}</div>
       </div>
+
     </div>
     <div class="row title text-center" style="color: rgba(0,0,0,0.2)">
       <div class=" col-md-4 col-small center">Description</div>
@@ -94,6 +107,10 @@ div.histogram .c3-axis-y .tick {
 
       {% if predictions != "" %}
         var predictions = JSON.parse({{predictions|tojson}});
+        d3.select("#predictions").selectAll().data(predictions).enter()
+          .append("li")
+            .attr("class", "list-group-item")
+            .html(function(d){return d.label + '<span class="badge">' + Math.round(d.score*10000)/100 + '%</span>'});
       {% endif %}
 
       $(document).ready(function(){

@@ -126,17 +126,30 @@ def new():
     Upload a pretrained model
     """
 
-    prototxt_path = get_tempfile(flask.request.files['prototxt_file'],".prototxt")
     caffemodel_path = get_tempfile(flask.request.files['caffemodel_file'],".caffemodel")
 
     labels_path = None
+    deploy_path = None
+    train_val_path = None
+    solver_path = None
+
+    if str(flask.request.files['deploy_file'].filename) is not '':
+        deploy_path = get_tempfile(flask.request.files['deploy_file'],".prototxt")
+
+    if str(flask.request.files['train_val_file'].filename) is not '':
+        train_val_path  = get_tempfile(flask.request.files['train_val_file'],".prototxt")
+
+    # if str(flask.request.files['solver_file'].filename) is not '':
+    #     solver_path = get_tempfile(flask.request.files['solver_file'],".prototxt")
 
     if str(flask.request.files['labels_file'].filename) is not '':
         labels_path = get_tempfile(flask.request.files['labels_file'],".txt")
 
     job = PretrainedModelJob(
-        prototxt_path,
         caffemodel_path,
+        deploy_path,
+        train_val_path,
+        solver_path,
         labels_path,
         username = utils.auth.get_username(),
         name = flask.request.form['job_name'],

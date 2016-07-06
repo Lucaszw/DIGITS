@@ -24,7 +24,12 @@
 //};
 
 (function () {
-    var app = angular.module('home_app', ['ngStorage']);
+    var app = angular.module('home_app', ['ngStorage'])
+        .filter('html',function($sce){
+        return function(input){
+            return $sce.trustAsHtml(input);
+        }
+    });
 
     app.controller('tab_controller', function () {
         this.tab = 2;
@@ -514,6 +519,22 @@
                            {name: 'status',    show: true,  min_width: 0},
                            {name: 'elapsed',   show: true,  min_width: 0},
                            {name: 'submitted', show: true,  min_width: 0}],
+        });
+    });
+
+    app.controller('pretrained_models_controller', function($scope, $localStorage, $controller) {
+        $controller('job_controller', {$scope: $scope});
+        $scope.title = 'Models';
+        $scope.storage = $localStorage.$default({
+            model_output_fields: [],
+            pretrained_model_fields: [{name: 'name',         show: true,  min_width: 0},
+                                      {name: 'framework',    show: true,  min_width: 0},
+                                      {name: 'has_deploy',   show: true,  min_width: 0},
+                                      {name: 'has_train_val',show: true,  min_width: 0},
+                                      {name: 'has_labels',   show: true,  min_width: 0},
+                                      {name: 'status',       show: true,  min_width: 0},
+                                      {name: 'elapsed',      show: true,  min_width: 0},
+                                      {name: 'submitted',    show: true,  min_width: 0}],
         });
     });
 

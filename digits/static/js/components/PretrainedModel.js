@@ -18,6 +18,21 @@ var PretrainedModel = function(props){
       .attr({type: type, class: "form-control", name: name});
   };
 
+  self.select = function(obj,data,label,name){
+    var group = obj.append("div").attr("class","form-group");
+    group.append("label")
+        .attr("for",name).html(label);
+
+    var options = group.append("select").attr({
+        class: "form-control",
+        name: name
+      })
+      .selectAll('option').data(data);
+
+    options.enter().append("option").text(function(d){return d});
+
+  }
+
   self.close = function(){
     self.container.html('');
   };
@@ -51,11 +66,26 @@ var PretrainedModel = function(props){
       .attr({action: self.url, method: "post", enctype: "multipart/form-data"})
       .style("padding", "10px "+self.size/10+"px");
 
-    self.form.append("h4").style(self.styles.h4).html("Upload Pretrained Model");
+    self.form.append("h4").style(self.styles.h4).html("Upload Pretrained Model (Caffe Only)");
 
-    self.input(self.form,"file","deploy.prototxt", "prototxt_file");
     self.input(self.form,"file","***.caffemodel", "caffemodel_file");
-    self.input(self.form,"text","Jobname", "job_name");
+
+    var row = self.form.append("div").attr("class","row");
+
+    self.input(row.append("div").attr("class","col-xs-6"),"text","Jobname", "job_name");
+    self.select(row.append("div").attr("class","col-xs-6"),["caffe"],"Framework","framework");
+
+    var row = self.form.append("div").attr("class","row");
+    var col1 = row.append("div").attr("class","col-xs-6");
+    var col2 = row.append("div").attr("class","col-xs-6");
+
+    col1.append("i").html("For Visualization:");
+    self.input(col1,"file","deploy.prototxt", "deploy_file");
+
+    col2.append("i").html("For Fine-Tuning:");
+    self.input(col2,"file","train_val.prototxt", "train_val_file");
+
+
     self.form.append("h6").html("Optional:");
     self.input(self.form,"file","Labels file", "labels_file");
 
@@ -90,7 +120,7 @@ var PretrainedModel = function(props){
       background: "rgba(0,0,0,0.5)",
       position: "fixed",
       top: "0px",
-      "z-index": 2
+      "z-index": 1000
     }
   };
 

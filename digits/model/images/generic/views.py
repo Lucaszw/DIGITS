@@ -10,6 +10,7 @@ import werkzeug.exceptions
 
 from .forms import GenericImageModelForm
 from .job import GenericImageModelJob
+from digits.pretrained_model.job import PretrainedModelJob
 from digits import extensions, frameworks, utils
 from digits.config import config_value
 from digits.dataset import GenericDatasetJob, GenericImageDatasetJob
@@ -33,7 +34,7 @@ def new(extension_id=None):
     form.dataset.choices = get_datasets(extension_id)
     form.standard_networks.choices = []
     form.previous_networks.choices = get_previous_networks()
-
+    form.pretrained_networks.choices = get_pretrained_networks()
     prev_network_snapshots = get_previous_network_snapshots()
 
     ## Is there a request to clone a job with ?clone=<job_id>
@@ -47,6 +48,7 @@ def new(extension_id=None):
         frameworks=frameworks.get_frameworks(),
         previous_network_snapshots=prev_network_snapshots,
         previous_networks_fullinfo=get_previous_networks_fulldetails(),
+        pretrained_networks_fullinfo=get_pretrained_networks_fulldetails(),
         multi_gpu=config_value('caffe_root')['multi_gpu'],
         )
 
@@ -621,6 +623,20 @@ def get_previous_network_snapshots():
         prev_network_snapshots.append(e)
     return prev_network_snapshots
 
+
+def get_pretrained_networks():
+    return [(j.id(), j.name()) for j in sorted(
+        [j for j in scheduler.jobs.values() if isinstance(j, PretrainedModelJob)],
+        cmp=lambda x,y: cmp(y.id(), x.id())
+        )
+        ]
+
+def get_pretrained_networks_fulldetails():
+    return [(j) for j in sorted(
+        [j for j in scheduler.jobs.values() if isinstance(j, PretrainedModelJob)],
+        cmp=lambda x,y: cmp(y.id(), x.id())
+        )
+        ]
 
 def get_view_extensions():
     """
