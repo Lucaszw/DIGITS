@@ -11,14 +11,14 @@
             </tr>
             {% for network in batch %}
             {% set inner_index = batch_loop_index * batch_size + loop.index0 %}
-            {% set previous_job = pretrained_networks_fullinfo[inner_index] %}
+            {% set pretrained_job = pretrained_networks_fullinfo[inner_index] %}
             <tr>
                 <td>
                     {{network}}
                     {{network.label}}
                     <a href="{{url_for('digits.pretrained_model.views.show', job_id=network.data)}}" target="_blank">View</a>
                 </td>
-                <td><a class="btn btn-sm" onClick="customizeNetwork('{{network.data}}');">Customize</a></td>
+                <td><a class="btn btn-sm" onClick="customizeNetwork('{{network.data}}',undefined,'{{pretrained_job.framework}}');">Customize</a></td>
             </tr>
             {% else %}
             <tr>
@@ -31,10 +31,10 @@
     {% endfor %}
 </div>
 
-{% if form.previous_networks.choices|length > batch_size %}
+{% if form.pretrained_networks.choices|length > batch_size %}
 <div class="text-center">
     <ul class="pagination">
-        {% for i in range((form.previous_networks.choices|length/batch_size)|round(0,'ceil')|int) %}
+        {% for i in range((form.pretrained_networks.choices|length/batch_size)|round(0,'ceil')|int) %}
         <li class="{{'active' if i==0}}"><a href="#pretrained_networks-page-{{i+1}}" data-toggle="tab">{{i+1}}</a></li>
         {% endfor %}
     </ul>

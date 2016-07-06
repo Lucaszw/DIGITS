@@ -149,8 +149,9 @@ def new():
         caffemodel_path,
         deploy_path,
         train_val_path,
-        solver_path,
+        None,
         labels_path,
+        flask.request.form['framework'],
         username = utils.auth.get_username(),
         name = flask.request.form['job_name'],
     )

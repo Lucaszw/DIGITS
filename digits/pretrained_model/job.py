@@ -13,14 +13,14 @@ class PretrainedModelJob(Job):
     A Job that uploads a pretrained model
     """
 
-    def __init__(self, caffemodel_path, deploy_path, train_val_path, solver_path, labels_path=None,**kwargs):
+    def __init__(self, caffemodel_path, deploy_path=None, train_val_path=None, solver_path=None, labels_path=None,framework="caffe",**kwargs):
         super(PretrainedModelJob, self).__init__(persistent = False, **kwargs)
 
         self.has_labels = labels_path is not None
         self.has_deploy = deploy_path is not None
         self.has_train_val = train_val_path is not None
         self.has_solver = solver_path is not None
-
+        self.framework  = framework
         self.tasks = []
         self.tasks.append(UploadPretrainedModelTask(
             caffemodel_path,
@@ -50,7 +50,7 @@ class PretrainedModelJob(Job):
 
     @override
     def __getstate__(self):
-        fields_to_save = ['_id', '_name', 'username', 'tasks', 'status_history', 'has_labels', 'has_deploy', 'has_train_val']
+        fields_to_save = ['_id', '_name', 'username', 'tasks', 'status_history', 'has_labels', 'framework', 'has_deploy', 'has_train_val']
         full_state = super(PretrainedModelJob, self).__getstate__()
         state_to_save = {}
         for field in fields_to_save:

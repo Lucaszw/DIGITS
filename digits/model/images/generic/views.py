@@ -68,6 +68,7 @@ def create(extension_id=None):
     form.dataset.choices = get_datasets(extension_id)
     form.standard_networks.choices = []
     form.previous_networks.choices = get_previous_networks()
+    form.pretrained_networks.choices = get_pretrained_networks()
 
     prev_network_snapshots = get_previous_network_snapshots()
 
@@ -86,6 +87,7 @@ def create(extension_id=None):
                 frameworks=frameworks.get_frameworks(),
                 previous_network_snapshots=prev_network_snapshots,
                 previous_networks_fullinfo=get_previous_networks_fulldetails(),
+                pretrained_networks_fullinfo=get_pretrained_networks_fulldetails(),
                 multi_gpu=config_value('caffe_root')['multi_gpu'],
                 ), 400
 
@@ -161,6 +163,13 @@ def create(extension_id=None):
                                 raise werkzeug.exceptions.BadRequest(
                                         "Pretrained_model for the selected epoch doesn't exists. May be deleted by another user/process. Please restart the server to load the correct pretrained_model details")
                         break
+            elif form.method.data == 'pretrained':
+                pretrained_job  = scheduler.get_job(form.pretrained_networks.data)
+                train_val_path  = pretrained_job.dir()+"/train_val.prototxt"
+                caffemodel_path = pretrained_job.dir()+"/model.caffemodel"
+
+                network = fw.get_network_from_path(train_val_path)
+                pretrained_model = caffemodel_path
 
             elif form.method.data == 'custom':
                 network = fw.get_network_from_desc(form.custom_network.data)

@@ -525,7 +525,7 @@ $('#customFramework li').on('shown.bs.tab', function(e) {
 });
 
 function visualizeNetwork() {
-    framework = $('#framework').val();
+    var framework = $('#framework').val();
     syncAceEditor(); // Sync ace editor to custom_network editor
     $.ajax("{{url_for('digits.model.views.visualize_network')}}?framework="+framework,
         {
