@@ -12,6 +12,8 @@ import werkzeug.exceptions
 
 from .forms import ImageClassificationModelForm
 from .job import ImageClassificationModelJob
+from digits.pretrained_model.job import PretrainedModelJob
+
 import digits
 from digits import frameworks
 from digits import utils
@@ -67,6 +69,7 @@ def new():
     form.standard_networks.choices = get_standard_networks()
     form.standard_networks.default = get_default_standard_network()
     form.previous_networks.choices = get_previous_networks()
+    form.pretrained_networks.choices = get_pretrained_networks()
 
     prev_network_snapshots = get_previous_network_snapshots()
 
@@ -78,6 +81,7 @@ def new():
             frameworks = frameworks.get_frameworks(),
             previous_network_snapshots = prev_network_snapshots,
             previous_networks_fullinfo = get_previous_networks_fulldetails(),
+            pretrained_networks_fullinfo = get_pretrained_networks_fulldetails(),
             multi_gpu = config_value('caffe_root')['multi_gpu'],
             )
 
@@ -95,11 +99,13 @@ def create():
     form.standard_networks.choices = get_standard_networks()
     form.standard_networks.default = get_default_standard_network()
     form.previous_networks.choices = get_previous_networks()
+    form.pretrained_networks.choices = get_pretrained_networks()
 
     prev_network_snapshots = get_previous_network_snapshots()
 
     ## Is there a request to clone a job with ?clone=<job_id>
     fill_form_if_cloned(form)
+
 
     if not form.validate_on_submit():
         if request_wants_json():
@@ -110,6 +116,7 @@ def create():
                     frameworks = frameworks.get_frameworks(),
                     previous_network_snapshots = prev_network_snapshots,
                     previous_networks_fullinfo = get_previous_networks_fulldetails(),
+                    pretrained_networks_fullinfo = get_pretrained_networks_fulldetails(),
                     multi_gpu = config_value('caffe_root')['multi_gpu'],
                     ), 400
 
@@ -165,6 +172,7 @@ def create():
                 if not found:
                     raise werkzeug.exceptions.BadRequest(
                             'Unknown standard model "%s"' % form.standard_networks.data)
+
             elif form.method.data == 'previous':
                 old_job = scheduler.get_job(form.previous_networks.data)
                 if not old_job:
@@ -195,6 +203,14 @@ def create():
                                 raise werkzeug.exceptions.BadRequest(
                                         "Pretrained_model for the selected epoch doesn't exists. May be deleted by another user/process. Please restart the server to load the correct pretrained_model details")
                         break
+
+            elif form.method.data == 'pretrained':
+                pretrained_job  = scheduler.get_job(form.pretrained_networks.data)
+                train_val_path  = pretrained_job.dir()+"/train_val.prototxt"
+                caffemodel_path = pretrained_job.dir()+"/model.caffemodel"
+
+                network = fw.get_network_from_path(train_val_path)
+                pretrained_model = caffemodel_path
 
             elif form.method.data == 'custom':
                 network = fw.get_network_from_desc(form.custom_network.data)
@@ -687,3 +703,16 @@ def get_previous_network_snapshots():
         prev_network_snapshots.append(e)
     return prev_network_snapshots
 
+def get_pretrained_networks():
+    return [(j.id(), j.name()) for j in sorted(
+        [j for j in scheduler.jobs.values() if isinstance(j, PretrainedModelJob)],
+        cmp=lambda x,y: cmp(y.id(), x.id())
+        )
+        ]
+
+def get_pretrained_networks_fulldetails():
+    return [(j) for j in sorted(
+        [j for j in scheduler.jobs.values() if isinstance(j, PretrainedModelJob)],
+        cmp=lambda x,y: cmp(y.id(), x.id())
+        )
+        ]
