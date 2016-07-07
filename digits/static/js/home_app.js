@@ -324,15 +324,9 @@
         $scope.search_text = '';     // set the default search/filter term
         $scope.sort = {
             active1: 'submitted',
-            descending1: true,
+            descending1: 1,
             active2: 'submitted',
-            descending2: true,
-        }
-        $scope.predicate1 = function(rows) {
-            return rows[$scope.sort.active1];
-        }
-        $scope.predicate2 = function(rows) {
-            return rows[$scope.sort.active2];
+            descending2: 1,
         }
         $scope.jobs = [];
 
@@ -340,20 +334,29 @@
             $scope.jobs = jobs;
         }
 
+        $scope.default_descending = function(active) {
+            for (var i = 0; i < $scope.jobs.length; i++) {
+                if (typeof($scope.jobs[i][active]) == 'string') {
+                    return -1;
+                }
+            }
+            return 1;
+        };
+
         $scope.change_sorting = function(parameter, event) {
             var sort = $scope.sort;
             if (!event.shiftKey || sort.active1 == parameter) {
                 if (sort.active1 == parameter) {
-                    sort.descending1 = sort.descending2 = !sort.descending1;
+                    sort.descending1 = sort.descending2 = -sort.descending1;
                 } else {
-                    sort.descending1 = sort.descending2 = false;
+                    sort.descending1 = sort.descending2 = $scope.default_descending(parameter);
                 }
                 sort.active1 = sort.active2 = parameter;
             } else {
                 if (sort.active2 == parameter) {
-                    sort.descending2 = !sort.descending2;
+                    sort.descending2 = -sort.descending2;
                 } else {
-                    sort.descending2 = false;
+                    sort.descending2 = $scope.default_descending(parameter);
                 }
                 sort.active2 = parameter;
             }
@@ -363,12 +366,12 @@
             var sort = $scope.sort;
 
             if (sort.active1 == parameter) {
-                return sort.descending1
+                return sort.descending1 == 1
                     ? 'glyphicon-chevron-up'
                     : 'glyphicon-chevron-down';
             }
             if (sort.active2 == parameter) {
-                return sort.descending2
+                return sort.descending2 == 1
                     ? 'glyphicon-chevron-up'
                     : 'glyphicon-chevron-down';
             }
@@ -570,16 +573,31 @@
             return match ? match[0] : ''
         }
     });
-    app.filter("empty_to_end", function () {
+
+    app.filter("sort_with_empty_at_end", function () {
         return function (array, scope) {
             if (!angular.isArray(array)) return;
-            var present = array.filter(function (item) {
-                return item[scope.sort.active2];
-            });
-            var empty = array.filter(function (item) {
-                return !item[scope.sort.active2]
-            });
-            return present.concat(empty);
+            array.sort(
+                function(x, y)
+                {
+                    var x1 = x[scope.sort.active1];
+                    var y1 = y[scope.sort.active1];
+                    var x2 = x[scope.sort.active2];
+                    var y2 = y[scope.sort.active2];
+                    var d1 = scope.sort.descending1;
+                    var d2 = scope.sort.descending2;
+
+                    if (x1 == y1) {
+                        if (x2 === undefined) return 1;
+                        if (y2 === undefined) return -1;
+                        return ((x2 < y2) ? d2 : (x2 > y2) ? -d2 : 0);
+                    }
+                    if (x1 === undefined) return 1;
+                    if (y1 === undefined) return -1;
+                    return ((x1 < y1) ? d1 : (x1 > y1) ? -d1 : 0);
+                }
+            );
+            return array;
         };
     });
 

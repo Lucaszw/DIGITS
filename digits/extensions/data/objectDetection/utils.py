@@ -1,8 +1,10 @@
 # Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
 
 import csv
-import numpy as np
 import os
+
+import numpy as np
+import PIL.Image
 
 class ObjectType:
 
@@ -39,9 +41,7 @@ class GroundTruthObj:
 
         #Values    Name      Description
         ----------------------------------------------------------------------------
-        1    type         Describes the type of object: 'Car', 'Van', 'Truck',
-                          'Pedestrian', 'Person_sitting', 'Cyclist', 'Tram',
-                          'Misc' or 'DontCare'
+        1    type         Class ID
         1    truncated    Float from 0 (non-truncated) to 1 (truncated), where
                           truncated refers to the object leaving image boundaries.
                           -1 corresponds to a don't care region.
@@ -61,6 +61,24 @@ class GroundTruthObj:
         for example because they have been too far away from the laser scanner.
     """
 
+    # default class mappings
+    OBJECT_TYPES = {
+        'bus': ObjectType.Bus,
+        'car': ObjectType.Car,
+        'cyclist': ObjectType.Cyclist,
+        'pedestrian': ObjectType.Person,
+        'people': ObjectType.People,
+        'person': ObjectType.Person,
+        'person_sitting': ObjectType.Person_Sitting,
+        'person-fa': ObjectType.Person_fa,
+        'person?': ObjectType.Person_unsure,
+        'pickup': ObjectType.Pickup,
+        'misc': ObjectType.Misc,
+        'special-vehicle': ObjectType.SpecialVehicle,
+        'tram': ObjectType.Tram,
+        'truck': ObjectType.Truck,
+        'van': ObjectType.Van,
+        'vehicle-with-trailer': ObjectType.VehicleWithTrailer}
 
     def __init__(self):
         self.stype = ''
@@ -119,38 +137,28 @@ class GroundTruthObj:
         return result
 
     def set_type(self):
-        object_types = {
-            'bus': ObjectType.Bus,
-            'car': ObjectType.Car,
-            'cyclist': ObjectType.Cyclist,
-            'pedestrian': ObjectType.Person,
-            'people': ObjectType.People,
-            'person': ObjectType.Person,
-            'person_sitting': ObjectType.Person_Sitting,
-            'person-fa': ObjectType.Person_fa,
-            'person?': ObjectType.Person_unsure,
-            'pickup': ObjectType.Pickup,
-            'misc': ObjectType.Misc,
-            'special-vehicle': ObjectType.SpecialVehicle,
-            'tram': ObjectType.Tram,
-            'truck': ObjectType.Truck,
-            'van': ObjectType.Van,
-            'vehicle-with-trailer': ObjectType.VehicleWithTrailer
-        }
-        self.object = object_types.get(self.stype, ObjectType.Dontcare)
+        self.object = self.OBJECT_TYPES.get(self.stype, ObjectType.Dontcare)
 
 
 class GroundTruth:
-
-    """ this class load the ground truth
+    """
+    this class loads the ground truth
     """
 
-    def __init__(self, label_dir, label_ext='.txt', label_delimiter=' ', min_box_size=None):
+    def __init__(self,
+                 label_dir,
+                 label_ext='.txt',
+                 label_delimiter=' ',
+                 min_box_size=None,
+                 class_mappings=None):
         self.label_dir = label_dir
         self.label_ext = label_ext  # extension of label files
         self.label_delimiter = label_delimiter  # space is used as delimiter in label files
         self._objects_all = dict()  # positive bboxes across images
         self.min_box_size = min_box_size
+
+        if class_mappings is not None:
+            GroundTruthObj.OBJECT_TYPES = class_mappings
 
     def update_objects_all(self, _key, _bboxes):
         if _bboxes:
@@ -261,6 +269,29 @@ def bbox_overlap(abox, bbox):
     overlap_pix = xoverlap * yoverlap
 
     return overlap_pix, overlap_box
+
+
+def pad_image(img, padding_image_height, padding_image_width):
+    """
+    pad a single image to the specified dimensions
+    """
+    src_width = img.size[0]
+    src_height = img.size[1]
+
+    if padding_image_width < src_width:
+        raise ValueError("Source image width %d is greater than padding width %d" % (src_width, padding_image_width))
+
+    if padding_image_height < src_height:
+        raise ValueError("Source image height %d is greater than padding height %d" % (src_height, padding_image_height))
+
+    padded_img = PIL.Image.new(
+        img.mode,
+        (padding_image_width, padding_image_height),
+        "black")
+    padded_img.paste(img, (0, 0))  # copy to top-left corner
+
+    return padded_img
+
 
 def resize_bbox_list(bboxlist, rescale_x=1, rescale_y=1):
         # this is expecting x1,y1,w,h:

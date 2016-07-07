@@ -580,7 +580,7 @@ def path_autocomplete():
         # Only allow absolute paths by prepending forward slash
         path = os.path.sep + path
 
-    suggestions = glob.glob(path+"*")
+    suggestions = [os.path.abspath(p) for p in glob.glob(path+"*")]
     if platform.system() == 'Windows':
         # on windows, convert backslashes with forward slashes
         suggestions = [p.replace('\\', '/') for p in suggestions]

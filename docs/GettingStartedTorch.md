@@ -2,7 +2,6 @@
 
 Table of Contents
 =================
-* [Installation](#installation)
 * [Enabling support for Torch7 in DIGITS](#enabling-support-for-torch7-in-digits)
 * [Selecting Torch7 when creating a model in DIGITS](#selecting-torch7-when-creating-a-model-in-digits)
 * [Defining a Torch7 model in DIGITS](#defining-a-torch7-model-in-digits)
@@ -18,14 +17,6 @@ Table of Contents
 * [Tutorials](#tutorials)
     * [Training an autoencoder](#training-an-autoencoder)
     * [Training a regression model](#training-a-regression-model)
-
-With v3.0, DIGITS now supports Torch7 as an optional alternative backend to Caffe.
-
-> NOTE: Torch support is still experimental!
-
-## Installation
-
-Follow [these instructions](BuildTorch.md) to install Torch.
 
 ## Enabling support for Torch7 in DIGITS
 
@@ -43,20 +34,23 @@ Where is torch installed?
 	(*)  [Previous]       <PATHS>
 	(P)  [PATH/TORCHPATH] <PATHS>
 	(N)  [none]           <NONE>
->> /home/user/torch/install/bin/th
+>> ~/torch/install/
 ```
 
 ## Selecting Torch7 when creating a model in DIGITS
 
-Select one of the "torch" tabs on the model creation page:
+Click on the "Torch" tab on the model creation page:
 
 ![Home page](images/torch-selection.png)
 
-> NOTE: by default, Torch7 initializes the weights of linear and convolutional layers according to the method introduced in `LeCun, Yann A., et al. "Efficient backprop." Neural networks: Tricks of the trade. Springer Berlin Heidelberg, 2012. 9-48.`. Although this weight initialization scheme performs reasonably well under many diverse circumstances, this is rarely optimal and you might notice that Caffe is sometimes able to learn more quickly when using e.g. Xavier initialization. See [these examples](../examples/weight-init/README.md) for more information.
+> NOTE: by default, Torch7 initializes the weights of linear and convolutional layers according to the method introduced in `LeCun, Yann A., et al. "Efficient backprop." Neural networks: Tricks of the trade. Springer Berlin Heidelberg, 2012. 9-48.`.
+Although this weight initialization scheme performs reasonably well under many diverse circumstances, this is rarely optimal and you might notice that Caffe is sometimes able to learn more quickly when using e.g. Xavier initialization.
+See [these examples](../examples/weight-init/README.md) for more information.
 
 ## Defining a Torch7 model in DIGITS
 
-To define a Torch7 model in DIGITS you need to write a Lua function that takes a table of external network parameters as argument and returns a table of internal network parameters. For example, the following code defines a flavour of LeNet:
+To define a Torch7 model in DIGITS you need to write a Lua function that takes a table of external network parameters as argument and returns a table of internal network parameters.
+For example, the following code defines a flavour of LeNet:
 
 ```lua
 return function(params)
@@ -109,7 +103,9 @@ fineTuneHook          | function     | No        | A function(net) that returns 
 
 ### Tensors
 
-Networks are fed with Torch Tensor objects in the NxCxHxW format (index in batch x channels x height x width). If a GPU is available, Tensors are provided as Cuda tensors and the model and criterion are moved to GPUs through a call to their cuda() method. In the absence of GPUs, Tensors are provided as Float tensors.
+Networks are fed with Torch Tensor objects in the NxCxHxW format (index in batch x channels x height x width).
+If a GPU is available, Tensors are provided as Cuda tensors and the model and criterion are moved to GPUs through a call to their cuda() method.
+In the absence of GPUs, Tensors are provided as Float tensors.
 
 ### Fine-tuning
 
@@ -139,7 +135,8 @@ end
 
 ### Selecting the NN backend
 
-Convolution layers are supported by a variety of backends (e.g. `nn`, `cunn`, `cudnn`, ...). The following snippet shows how to select between `nn`, `cunn`, `cudnn` based on their availability in the system:
+Convolution layers are supported by a variety of backends (e.g. `nn`, `cunn`, `cudnn`, ...).
+The following snippet shows how to select between `nn`, `cunn`, `cudnn` based on their availability in the system:
 
 ```lua
 if pcall(function() require('cudnn') end) then
@@ -164,7 +161,10 @@ lenet:add(nn.LogSoftMax())
 
 ### Supervised regression learning
 
-In supervised regression learning, labels may not be scalars like in classification learning. To learn a regression model, a generic dataset may be created using one database for input samples and one database for labels (only 1D row label vectors are supported presently). The appropriate loss function must be specified using the `loss` internal parameters. For example the following snippet defines a simple regression model on 1x10x10 images using MSE loss:
+In supervised regression learning, labels may not be scalars like in classification learning.
+To learn a regression model, a generic dataset may be created using one database for input samples and one database for labels (only 1D row label vectors are supported presently).
+The appropriate loss function must be specified using the `loss` internal parameters.
+For example the following snippet defines a simple regression model on 1x10x10 images using MSE loss:
 
 ```lua
 local net = nn.Sequential()
@@ -180,26 +180,42 @@ end
 
 ### Command Line Inference
 
-DIGITS Lua wrappers may also be used from command line. For example, to classify an image using the snapshot at epoch `10` of a model job `20150921-141321-86c1` using a dataset `20150916-001059-e0cd`:
+DIGITS Lua wrappers may also be used from command line.
+For example, to classify an image `test.png` using the snapshot at epoch `30` of a model job `20160707-093158-9ed6` using a dataset `20160117-131355-ba71`:
 
 ```
-th /fast-scratch/gheinrich/ws/digits/tools/torch/test.lua --image=/path/to/image.png --network=model --networkDirectory=/path/to/jobs/20150921-141321-86c1 --load=/path/to/20150921-141321-86c1 --snapshotPrefix=snapshot --mean=/path/to/jobs/20150916-001059-e0cd/mean.jpg --labels=/path/to/jobs/20150916-001059-e0cd/labels.txt --epoch=10 --crop=no --subtractMean=image
-2015-09-22 15:21:55 [INFO ] Loading network definition from /path/to/jobs/20150921-141321-86c1/model
-2015-09-22 15:21:55 [INFO ] Loading /path/to/jobs/20150921-141321-86c1/snapshot_10_Weights.t7 file
-2015-09-22 15:21:55 [INFO ] For image 1, predicted class 1: 10 (9) 0.99923830445863
-2015-09-22 15:21:55 [INFO ] For image 1, predicted class 2: 9 (8) 0.00074051392287852
-2015-09-22 15:21:55 [INFO ] For image 1, predicted class 3: 8 (7) 1.6892548943146e-05
-2015-09-22 15:21:55 [INFO ] For image 1, predicted class 4: 4 (3) 2.9689886060496e-06
-2015-09-22 15:21:55 [INFO ] For image 1, predicted class 5: 5 (4) 9.7695222396362e-07
+th /home/greg/ws/digits/tools/torch/wrapper.lua test.lua --image=test.png --network=model --networkDirectory=/home/greg/ws/digits/digits/jobs/20160707-093158-9ed6 --snapshot=/home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/snapshot_30_Model.t7 --labels=/home/greg/ws/digits/digits/jobs/20160117-131355-ba71/labels.txt --mean=/home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/mean.jpg --subtractMean=image
+2016-07-07 09:43:20 [INFO ] Loading mean tensor from /home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/mean.jpg file
+2016-07-07 09:43:20 [INFO ] Loading network definition from /home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/model
+Using CuDNN backend
+2016-07-07 09:43:20 [INFO ] For image 1, predicted class 1: 5 (4) 0.99877911806107
+2016-07-07 09:43:20 [INFO ] For image 1, predicted class 2: 10 (9) 0.0011787103721872
+2016-07-07 09:43:20 [INFO ] For image 1, predicted class 3: 8 (7) 3.8778140151408e-05
+2016-07-07 09:43:20 [INFO ] For image 1, predicted class 4: 7 (6) 2.3879254058556e-06
+2016-07-07 09:43:20 [INFO ] For image 1, predicted class 5: 1 (0) 4.1431232489231e-07
+```
+
+For classification networks, the Top-5 classes are shown. For each class, the label is shown within brackets.
+For example `predicted class 1: 5 (4) 0.99877911806107` means that the network predicted the most likely class to be the 5th class in `labels.txt` with label `"4"` and probability `99.88%`.
+
+For other types of networks, set `--allPredictions=yes` on the command line to display the raw network output.
+For example:
+
+```
+th /home/greg/ws/digits/tools/torch/wrapper.lua test.lua --image=test.png --network=model --networkDirectory=/home/greg/ws/digits/digits/jobs/20160707-093158-9ed6 --snapshot=/home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/snapshot_30_Model.t7 --mean=/home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/mean.jpg --subtractMean=image --allPredictions=yes
+2016-07-07 09:46:31 [INFO ] Loading mean tensor from /home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/mean.jpg file
+2016-07-07 09:46:31 [INFO ] Loading network definition from /home/greg/ws/digits/digits/jobs/20160707-093158-9ed6/model
+Using CuDNN backend
+2016-07-07 09:46:32 [INFO ] Predictions for image 1: [-14.696645736694,-16.256759643555,-16.247381210327,-20.25181388855,-0.0012216567993164,-18.055643081665,-12.945085525513,-10.157653808594,-15.657314300537,-6.7433342933655]
 ```
 
 ### Multi-GPU training
 
 Data parallelism is supported in Torch7 by cunn through the [DataParallelTable](https://github.com/torch/cunn/blob/master/doc/cunnmodules.md#nn.DataParallelTable)
-module. DIGITS provides the number of available GPUs through the `ngpus` external parameter.
+module.
+DIGITS provides the number of available GPUs through the `ngpus` external parameter.
 
-Assuming `net` is a container that encapsulates the definition of a network, the following snippet may be used
-to enable data parallelism into a container called `model`:
+Assuming `net` is a container that encapsulates the definition of a network, the following snippet may be used to enable data parallelism into a container called `model`:
 
 ```lua
 local model

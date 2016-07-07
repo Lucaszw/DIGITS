@@ -38,6 +38,31 @@ def validate_required_iff(**kwargs):
 
     return _validator
 
+def validate_required_if_set(other_field, **kwargs):
+    """
+    Used as a validator within a wtforms.Form
+
+    This implements a conditional DataRequired
+    `other_field` is a field name; if set, the other field makes it mandatory
+    to set the field being tested
+    """
+    def _validator(form, field):
+        other_field_value = getattr(form, other_field).data
+        if other_field_value is not None and other_field_value is not "":
+            # Verify that data exists
+            if field.data is None \
+                    or (isinstance(field.data, (str, unicode))
+                            and not field.data.strip()) \
+                    or (isinstance(field.data, FileStorage)
+                            and not field.data.filename.strip()):
+                raise validators.ValidationError('This field is required if %s is set.' % other_field)
+        else:
+            # This field is not required, ignore other errors
+            field.errors[:] = []
+            raise validators.StopValidation()
+
+    return _validator
+
 def validate_greater_than(fieldname):
     """
     Compares the value of two fields the value of self is to be greater than the supplied field.
@@ -349,7 +374,6 @@ class MultiNumberRange(object):
     def __call__(self, form, field):
         fdata = field.data if isinstance(field.data, (list, tuple)) else [field.data]
         for data in fdata:
-            print 'checking', data, self.min
             flags = 0
             flags |= (data is None) << 0
             flags |= (self.min is not None and self.min_inclusive and data < self.min) << 1

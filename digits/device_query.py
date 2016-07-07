@@ -186,7 +186,10 @@ def get_devices(force_reload=False):
 
     # get number of devices
     num_devices = ctypes.c_int()
-    cudart.cudaGetDeviceCount(ctypes.byref(num_devices))
+    rc = cudart.cudaGetDeviceCount(ctypes.byref(num_devices))
+    if rc != 0:
+        print 'cudaGetDeviceCount() failed with error #%s' % rc
+        return []
 
     # query devices
     for x in xrange(num_devices.value):
@@ -199,6 +202,8 @@ def get_devices(force_reload=False):
             if rc == 0:
                 properties.pciBusID_str = pciBusID_str
             devices.append(properties)
+        else:
+            print 'cudaGetDeviceProperties() failed with error #%s' % rc
         del properties
     return devices
 
@@ -230,7 +235,7 @@ def get_nvml_info(device_id):
         handle = c_nvmlDevice_t()
         rc = nvml.nvmlDeviceGetHandleByPciBusId(ctypes.c_char_p(device.pciBusID_str), ctypes.byref(handle))
         if rc != 0:
-            raise RuntimeError('nvmlDeviceGetHandleByIndex() failed with error #%s' % rc)
+            raise RuntimeError('nvmlDeviceGetHandleByPciBusId() failed with error #%s' % rc)
 
         # Grab info for this device from NVML
         info = {}

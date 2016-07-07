@@ -596,8 +596,9 @@ class CaffeTrainTask(TrainTask):
         # network sanity checks
         self.logger.debug("Network sanity check - train")
         CaffeTrainTask.net_sanity_check(train_val_network, caffe_pb2.TRAIN)
-        self.logger.debug("Network sanity check - val")
-        CaffeTrainTask.net_sanity_check(train_val_network, caffe_pb2.TEST)
+        if val_image_data_layer is not None:
+            self.logger.debug("Network sanity check - val")
+            CaffeTrainTask.net_sanity_check(train_val_network, caffe_pb2.TEST)
 
         ### Write deploy file
 
@@ -835,7 +836,7 @@ class CaffeTrainTask(TrainTask):
                 else:
                     raise ValueError('Unknown flavor.  Support NVIDIA and BVLC flavors only.')
         if self.pretrained_model:
-            args.append('--weights=%s' % ','.join(map(lambda x: self.path(x), self.pretrained_model.split(':'))))
+            args.append('--weights=%s' % ','.join(map(lambda x: self.path(x), self.pretrained_model.split(os.path.pathsep))))
         return args
 
 
@@ -849,7 +850,7 @@ class CaffeTrainTask(TrainTask):
         gpu_id -- the GPU device id to use
         """
         # TODO: Remove this once caffe.exe works fine with Python Layer
-        solver_type_mapping = {            
+        solver_type_mapping = {
             'ADADELTA': 'AdaDeltaSolver',
             'ADAGRAD' : 'AdaGradSolver',
             'ADAM'    : 'AdamSolver',
@@ -860,12 +861,15 @@ class CaffeTrainTask(TrainTask):
             solver_type = solver_type_mapping[self.solver_type]
         except KeyError:
             raise ValueError("Unknown solver type {}.".format(self.solver_type))
-        gpu_script = "caffe.set_device({id});".format(id=gpu_id) if gpu_id else ""
-        if self.pretrained_model:
-            weight_files = ','.join(map(lambda x: self.path(x), self.pretrained_model.split(':')))
-            loading_script = "solv.net.copy_from('{weight}');".format(weight=weight_files)
+        if gpu_id is not None:
+            gpu_script = "caffe.set_device({id});caffe.set_mode_gpu();".format(id=gpu_id)
         else:
-            loading_script = ""
+            gpu_script = "caffe.set_mode_cpu();"
+        loading_script = ""
+        if self.pretrained_model:
+            weight_files = map(lambda x: self.path(x), self.pretrained_model.split(os.path.pathsep))
+            for weight_file in weight_files:
+                loading_script = loading_script + "solv.net.copy_from('{weight}');".format(weight=weight_file)
         command_script =\
             "import caffe;" \
             "{gpu_script}" \
@@ -875,7 +879,7 @@ class CaffeTrainTask(TrainTask):
             .format(gpu_script=gpu_script,
                     solver=solver_type,
                     solver_file = self.solver_file, loading_script=loading_script)
-        args = ['python -c '+ '\"' + command_script + '\"']
+        args = [sys.executable + ' -c '+ '\"' + command_script + '\"']
         return args
 
     @override
