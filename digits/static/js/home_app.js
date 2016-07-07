@@ -529,8 +529,6 @@
             model_output_fields: [],
             pretrained_model_fields: [{name: 'name',         show: true,  min_width: 0},
                                       {name: 'framework',    show: true,  min_width: 0},
-                                      {name: 'has_deploy',   show: true,  min_width: 0},
-                                      {name: 'has_train_val',show: true,  min_width: 0},
                                       {name: 'has_labels',   show: true,  min_width: 0},
                                       {name: 'status',       show: true,  min_width: 0},
                                       {name: 'elapsed',      show: true,  min_width: 0},

@@ -5,7 +5,7 @@ var PretrainedModel = function(props){
   var self = this;
   var _url = $SCRIPT_ROOT+"/models/images/visualizations/new";
 
-  self.size      = 450;
+  self.size      = 410;
   self.url       = _.isUndefined(props.url) ? _url : props.url;
   self.container = null;
   self.form      = null;
@@ -13,6 +13,7 @@ var PretrainedModel = function(props){
   self.input = function(obj,type,label,name){
     var group = obj.append("div").attr("class","form-group");
     group.append("label")
+        .style(self.styles.label)
         .attr("for",name).html(label);
     group.append("input")
       .attr({type: type, class: "form-control", name: name});
@@ -21,6 +22,7 @@ var PretrainedModel = function(props){
   self.select = function(obj,data,label,name){
     var group = obj.append("div").attr("class","form-group");
     group.append("label")
+        .style(self.styles.label)
         .attr("for",name).html(label);
 
     var options = group.append("select").attr({
@@ -55,7 +57,7 @@ var PretrainedModel = function(props){
     body.append("div")
       .style({width:"100%", "text-align": "right"})
       .append("a")
-        .attr("class","btn btn-default btn-xs")
+        .attr("class","btn btn-danger btn-xs")
         .style(self.styles.closeButton)
         .on("click", self.close)
         .append("span")
@@ -66,28 +68,16 @@ var PretrainedModel = function(props){
       .attr({action: self.url, method: "post", enctype: "multipart/form-data"})
       .style("padding", "10px "+self.size/10+"px");
 
-    self.form.append("h4").style(self.styles.h4).html("Upload Pretrained Model (Caffe Only)");
+    self.form.append("h4").style(self.styles.h4).html("Upload Pretrained Model (Currently Caffe Only)");
 
-    self.input(self.form,"file","***.caffemodel", "caffemodel_file");
+    self.input(self.form,"file","Weights (**.caffemodel)", "weights_file");
 
     var row = self.form.append("div").attr("class","row");
 
     self.input(row.append("div").attr("class","col-xs-6"),"text","Jobname", "job_name");
-    self.select(row.append("div").attr("class","col-xs-6"),["caffe"],"Framework","framework");
-
-    var row = self.form.append("div").attr("class","row");
-    var col1 = row.append("div").attr("class","col-xs-6");
-    var col2 = row.append("div").attr("class","col-xs-6");
-
-    col1.append("i").html("For Visualization:");
-    self.input(col1,"file","deploy.prototxt", "deploy_file");
-
-    col2.append("i").html("For Fine-Tuning:");
-    self.input(col2,"file","train_val.prototxt", "train_val_file");
-
-
-    self.form.append("h6").html("Optional:");
-    self.input(self.form,"file","Labels file", "labels_file");
+    self.select(row.append("div").attr("class","col-xs-6"),["caffe"],"Framework (Caffe Only)","framework");
+    self.input(self.form,"file","Model Definition: (original.prototxt)", "model_def_file");
+    self.input(self.form,"file","Labels file: (Optional)", "labels_file");
 
     self.form.append("button").attr({type: "submit",class: "btn btn-default"})
       .on("click",self.submit)
@@ -98,9 +88,7 @@ var PretrainedModel = function(props){
 
   self.styles = {
     closeButton: {
-      background: "#ff7e7e",
-      color: "white",
-      border: "1px solid #d42525"
+      color: "white"
     },
     body: {
       height: self.size + "px",
@@ -112,7 +100,8 @@ var PretrainedModel = function(props){
     h4: {
       position: "relative",
       top: "-10px",
-      margin: "0px"
+      margin: "0px",
+      "font-size": "16px"
     },
     outer: {
       width: "100%",
@@ -121,6 +110,9 @@ var PretrainedModel = function(props){
       position: "fixed",
       top: "0px",
       "z-index": 1000
+    },
+    label: {
+      "font-size": "13px"
     }
   };
 

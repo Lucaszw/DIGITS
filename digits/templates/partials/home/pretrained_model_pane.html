@@ -71,8 +71,6 @@
                         ng-repeat="job in jobs">
                         <td ng-bind="job.name"></td>
                         <td><dg-framework/></td>
-                        <td ng-bind-html="'{[ job.has_deploy | precision:2 ]}'|html"></td>
-                        <td ng-bind-html="'{[ job.has_train_val | precision:2 ]}'|html"></td>
                         <td ng-bind-html="'{[ job.has_labels | precision:2 ]}'|html"></td>
                         <td class="text-{[job.status_css]}">
                             {[ job.status ]}

@@ -180,14 +180,10 @@ def json_dict(job, model_output_fields):
         d.update({ 'type': 'model' })
     if isinstance(job, pretrained_model.PretrainedModelJob):
         model_output_fields.add("has_labels")
-        model_output_fields.add("has_deploy")
-        model_output_fields.add("has_train_val")
         d.update({
         'type': 'pretrained_model',
         'framework': 'caffe',
-        'has_labels': "&#10004;" if job.has_labels else "&#10006;",
-        'has_deploy': "&#10004;" if job.has_deploy else "&#10006;",
-        'has_train_val': "&#10004;" if job.has_train_val else "&#10006;"
+        'has_labels': "&#10004;" if job.has_labels else "&#10006;"
         })
     return d
 
@@ -648,4 +644,3 @@ def on_leave_jobs():
         del flask.session['room']
         #print '>>> Somebody left room %s' % room
         leave_room(room)
-

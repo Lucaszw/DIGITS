@@ -125,38 +125,21 @@ def new():
     """
     Upload a pretrained model
     """
-
-    caffemodel_path = get_tempfile(flask.request.files['caffemodel_file'],".caffemodel")
-
+    weights_path   = get_tempfile(flask.request.files['weights_file'],".caffemodel")
+    model_def_path = get_tempfile(flask.request.files['model_def_file'],".prototxt")
     labels_path = None
-    deploy_path = None
-    train_val_path = None
-    solver_path = None
-
-    if str(flask.request.files['deploy_file'].filename) is not '':
-        deploy_path = get_tempfile(flask.request.files['deploy_file'],".prototxt")
-
-    if str(flask.request.files['train_val_file'].filename) is not '':
-        train_val_path  = get_tempfile(flask.request.files['train_val_file'],".prototxt")
-
-    # if str(flask.request.files['solver_file'].filename) is not '':
-    #     solver_path = get_tempfile(flask.request.files['solver_file'],".prototxt")
 
     if str(flask.request.files['labels_file'].filename) is not '':
         labels_path = get_tempfile(flask.request.files['labels_file'],".txt")
 
     job = PretrainedModelJob(
-        caffemodel_path,
-        deploy_path,
-        train_val_path,
-        None,
+        weights_path,
+        model_def_path,
         labels_path,
         flask.request.form['framework'],
         username = utils.auth.get_username(),
         name = flask.request.form['job_name'],
     )
-
-
     scheduler.add_job(job)
 
     return flask.redirect(flask.url_for('digits.views.home'))
