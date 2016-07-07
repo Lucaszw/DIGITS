@@ -57,6 +57,12 @@ class ModelJob(Job):
         """Return the first TrainTask for this job"""
         return [t for t in self.tasks if isinstance(t, tasks.TrainTask)][0]
 
+    def get_job_stats_as_json_string(self):
+        """
+        Returns stats for a job as a json string
+        """
+        return NotImplementedError()
+
     def download_files(self):
         """
         Returns a list of tuples: [(path, filename)...]
