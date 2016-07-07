@@ -18,6 +18,7 @@ from . import images as model_images
 from . import ModelJob
 from digits.pretrained_model.job import PretrainedModelJob
 from digits.inference import WeightsJob
+
 from digits import frameworks, extensions
 from digits.utils import time_filters, auth
 from digits.utils.routing import request_wants_json

@@ -13,7 +13,7 @@ class UploadPretrainedModelTask(Task):
     A task for uploading pretrained models
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, weights_path, model_def_path, labels_path=None, framework="caffe", **kwargs):
         """
         Arguments:
         weights_path -- path to model weights (**.caffemodel or ***.t7)
