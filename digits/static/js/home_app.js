@@ -24,7 +24,12 @@
 //};
 
 (function () {
-    var app = angular.module('home_app', ['ngStorage']);
+    var app = angular.module('home_app', ['ngStorage'])
+        .filter('html',function($sce){
+        return function(input){
+            return $sce.trustAsHtml(input);
+        }
+    });
 
     app.controller('tab_controller', function () {
         this.tab = 2;
@@ -93,7 +98,9 @@
                     }
                 }
 
-                $scope.jobs = [].concat(response.data.running, response.data.datasets, response.data.models);
+
+                var r = response.data;
+                $scope.jobs = [].concat(r.running, r.datasets, r.models, r.pretrained_models);
 
                 var scope = angular.element(document.getElementById("models-table")).scope();
                 // scope.storage.model_output_fields = [];
@@ -130,6 +137,10 @@
 
         $scope.is_model = function(job) {
             return (!$scope.is_running(job) && job.type == 'model');
+        }
+
+        $scope.is_pretrained_model = function(job) {
+            return (!$scope.is_running(job) && job.type == 'pretrained_model');
         }
 
         $scope.set_attribute = function(job_id, name, value) {
@@ -514,6 +525,20 @@
         });
     });
 
+    app.controller('pretrained_models_controller', function($scope, $localStorage, $controller) {
+        $controller('job_controller', {$scope: $scope});
+        $scope.title = 'Models';
+        $scope.storage = $localStorage.$default({
+            model_output_fields: [],
+            pretrained_model_fields: [{name: 'name',         show: true,  min_width: 0},
+                                      {name: 'framework',    show: true,  min_width: 0},
+                                      {name: 'has_labels',   show: true,  min_width: 0},
+                                      {name: 'status',       show: true,  min_width: 0},
+                                      {name: 'elapsed',      show: true,  min_width: 0},
+                                      {name: 'submitted',    show: true,  min_width: 0}],
+        });
+    });
+
     function precision(input, sigfigs) {
         if (isNaN(input)) return input;
         if (input == 0) return input;
@@ -665,6 +690,8 @@
 })();
 
 $(document).ready(function() {
+    var pretrainedModel = new PretrainedModel({url: $("#uploadPretrainedModel").attr("href")});
+    $("#uploadPretrainedModel").on("click", pretrainedModel.render);
 
     // Ideally this should be handled with an angularjs directive, but
     // for now is a global click event.
