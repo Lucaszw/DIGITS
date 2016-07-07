@@ -1,23 +1,42 @@
 <!-- Pretrained Model -->
-<div ng-show="tab.isSet(3)">
+<div class="col-md-12" ng-show="tab.isSet(3)">
     <div class="well">
         <div ng-controller="pretrained_models_controller">
             <div class="row">
-                <div class="col-md-4 pull-right">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <form>
-                                <div class="form-group">
-                                    <div class="input-group">
-                                        <div class="input-group-addon"><i class="glyphicon glyphicon-search"></i></div>
-                                        <input type="text" class="form-control" placeholder="Filter" ng-model="search_text">
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
+                <div class="col-md-12">
+                    <!-- Output Field Options -->
+                    <div class="button-group pull-right">
+                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                            <span class="glyphicon glyphicon-cog"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" ng-click="$event.stopPropagation()">
+                            <li data-ng-repeat='field in storage.pretrained_model_fields'>
+                                <label style="font-weight: normal !important;">
+                                    <input type="checkbox" ng-model='field.show'>
+                                    {[ field.name ]}
+                                </label>
+                            </li>
+                            <li data-ng-repeat='field in storage.model_output_fields'>
+                                <label style="font-weight: normal !important;">
+                                    <input type="checkbox" ng-model='field.show'>
+                                    {[ field.name ]}
+                                </label>
+                            </li>
+                        </ul>
                     </div>
-                </div>
-                <div class="col-md-8">
+                    <!-- Filter -->
+                    <div class="pull-right">
+                        <form>
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <div class="input-group-addon"><i class="glyphicon glyphicon-search"></i></div>
+                                    <input type="text" class="form-control" placeholder="Filter" ng-model="search_text">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <!-- Delete Button -->
                     <a class="btn btn-xs btn-danger"
                        ng-disabled="!any_selected()"
                        ng-click="delete_jobs();">
@@ -34,30 +53,30 @@
                 <col ng-repeat="field in storage.model_output_fields | filter:show(true)"
                      ng-style="{'width':visualLength(field.name) + 'px'}">
                 <thead>
-                    <tr>
-                        <th ng-repeat="field in storage.pretrained_model_fields | filter:show(true)">
-                            <div ng-click="change_sorting(field.name, $event)">
-                                <small>
-                                    {[ field.name ]}
-                                </small>
-                                <i class="glyphicon"
-                                   ng-class="get_icon(field.name)" style="width:14px">
-                                </i>
-                            </div>
-                        </th>
-                        <th ng-repeat="field in storage.model_output_fields | filter:show(true)">
-                            <div ng-click="change_sorting(field.name, $event)">
-                                <small>
-                                    {[ field.name ]}
-                                </small>
-                                <i class="glyphicon"
-                                   ng-class="get_icon(field.name)" style="width:14px">
-                                </i>
-                            </div>
-                        </th>
-                    </tr>
+                   <tr>
+                     <th ng-repeat="field in storage.pretrained_model_fields | filter:show(true)">
+                       <div ng-click="change_sorting(field.name, $event)">
+                         <small>
+                             {[ field.name ]}
+                         </small>
+                         <i class="glyphicon"
+                            ng-class="get_icon(field.name)" style="width:14px">
+                         </i>
+                       </div>
+                     </th>
+                     <th ng-repeat="field in storage.model_output_fields | filter:show(true)">
+                       <div ng-click="change_sorting(field.name, $event)">
+                         <small>
+                             {[ field.name ]}
+                         </small>
+                         <i class="glyphicon"
+                            ng-class="get_icon(field.name)" style="width:14px">
+                         </i>
+                       </div>
+                     </th>
+                   </tr>
                 </thead>
-                {[jobs = (jc.pretrained_model_jobs | filter:search_text | orderBy:predicate2:sort.descending2 | orderBy:predicate1:sort.descending1 | empty_to_end:this);'']}
+                {[jobs = (jc.pretrained_model_jobs | filter:search_text | sort_with_empty_at_end:this);'']}
                 {[set_jobs(jobs)]}
                 <tbody ng-if="jobs.length">
                     <tr ng-attr-id="{[ job.id ]}"

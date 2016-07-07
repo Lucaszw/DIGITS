@@ -6,7 +6,6 @@ import numpy as np
 from digits import dataset, extensions, model, utils
 from digits.webapp import app, scheduler
 from digits.pretrained_model import PretrainedModelJob
-from digits.visualizations.jobs import PretrainedModelInferenceJob
 from digits.utils.routing import request_wants_json, job_from_request
 from digits import utils
 import werkzeug.exceptions
