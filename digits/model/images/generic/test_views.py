@@ -498,6 +498,15 @@ class BaseTestCreatedWithAnyDataset(BaseViewsTestWithModelWithAnyDataset):
         job = digits.webapp.scheduler.get_job(self.model_id)
         assert job.save(), 'Job failed to save'
 
+    def test_get_snapshot(self):
+        job  = digits.webapp.scheduler.get_job(self.model_id)
+        task = job.train_task()
+        f = task.get_snapshot(-1)
+
+        assert f, "Failed to load snapshot"
+        filename = task.get_snapshot_filename(-1)
+        assert filename, "Failed to get filename"
+
     def test_download(self):
         for extension in ['tar', 'zip', 'tar.gz', 'tar.bz2']:
             yield self.check_download, extension
