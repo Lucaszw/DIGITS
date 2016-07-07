@@ -83,9 +83,9 @@ def customize():
                 break
 
     if isinstance(job,PretrainedModelJob):
-        train_val = open(job.get_train_val_prototxt(),'r')
-        network = train_val.read()
-        snapshot = job.get_caffemodel()
+        model_def = open(job.get_model_def_path(),'r')
+        network = model_def.read()
+        snapshot = job.get_weights_path()
     else:
         network = job.train_task().get_network_desc()
 

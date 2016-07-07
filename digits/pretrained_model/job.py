@@ -30,7 +30,7 @@ class PretrainedModelJob(Job):
         return self.dir()+"/model.caffemodel"
 
     def get_model_def_path(self):
-        return self.dir()+"/deploy.prototxt"
+        return self.dir()+"/original.prototxt"
 
     @override
     def job_type(self):

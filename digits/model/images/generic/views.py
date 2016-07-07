@@ -165,11 +165,11 @@ def create(extension_id=None):
                         break
             elif form.method.data == 'pretrained':
                 pretrained_job  = scheduler.get_job(form.pretrained_networks.data)
-                train_val_path  = pretrained_job.dir()+"/train_val.prototxt"
-                caffemodel_path = pretrained_job.dir()+"/model.caffemodel"
+                model_def_path  = pretrained_job.get_model_def_path()
+                weights_path    = pretrained_job.get_weights_path()
 
-                network = fw.get_network_from_path(train_val_path)
-                pretrained_model = caffemodel_path
+                network = fw.get_network_from_path(model_def_path)
+                pretrained_model = weights_path
 
             elif form.method.data == 'custom':
                 network = fw.get_network_from_desc(form.custom_network.data)
