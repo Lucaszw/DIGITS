@@ -17,6 +17,7 @@
     <script src="{{ url_for('static', filename='js/c3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery.autocomplete.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/file_field.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/underscore.min.js') }}"></script>
 
     <script src="{{ url_for('static', filename='js/ace/ace.js') }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{ url_for('static', filename='js/ace/mode-python.js') }}" type="text/javascript" charset="utf-8"></script>
@@ -64,6 +65,8 @@
     {% endblock %}
 </div>
 <script>
+$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
 $(".explanation-tooltip").tooltip();
 
 window.onload = function () {
