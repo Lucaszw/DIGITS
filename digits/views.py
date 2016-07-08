@@ -352,6 +352,7 @@ def job_status(job_id):
         result['type'] = job.job_type()
     return json.dumps(result)
 
+@blueprint.route('/pretrained_models/<job_id>', methods=['DELETE'])
 @blueprint.route('/datasets/<job_id>', methods=['DELETE'])
 @blueprint.route('/models/<job_id>', methods=['DELETE'])
 @blueprint.route('/jobs/<job_id>', methods=['DELETE'])
