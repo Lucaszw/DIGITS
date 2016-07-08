@@ -28,11 +28,18 @@ def new():
     """
     labels_path = None
     framework   = None
-    if str(flask.request.files['weights_file'].filename) is '':
-        raise werkzeug.exceptions.BadRequest('Missing Weights File')
 
+    # Validate model weights:
+    if str(flask.request.files['weights_file'].filename) is '':
+        raise werkzeug.exceptions.BadRequest('Missing weights file')
+    elif flask.request.files['weights_file'].filename.rsplit('.',1)[1] != "caffemodel" :
+        raise werkzeug.exceptions.BadRequest('Weights must be a .caffemodel file')
+
+    # Validate model definition:
     if str(flask.request.files['model_def_file'].filename) is '':
-        raise werkzeug.exceptions.BadRequest('Missing Model Definition File')
+        raise werkzeug.exceptions.BadRequest('Missing model definition file')
+    elif flask.request.files['model_def_file'].filename.rsplit('.',1)[1] != "prototxt" :
+        raise werkzeug.exceptions.BadRequest('Model definition must be .prototxt file')
 
     if 'framework' not in flask.request.form:
         framework = None
@@ -40,7 +47,9 @@ def new():
         framework = flask.request.form['framework']
 
     if 'job_name' not in flask.request.form:
-        raise werkzeug.exceptions.BadRequest('Missing Job Name')
+        raise werkzeug.exceptions.BadRequest('Missing job name')
+    elif str(flask.request.form['job_name']) is '':
+        raise werkzeug.exceptions.BadRequest('Missing job name')
 
     weights_path   = get_tempfile(flask.request.files['weights_file'],".caffemodel")
     model_def_path = get_tempfile(flask.request.files['model_def_file'],".prototxt")
