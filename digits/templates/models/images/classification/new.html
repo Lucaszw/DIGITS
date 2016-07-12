@@ -505,6 +505,18 @@ function setFramework(fwid)
                         $prevtab_prev_clicked_tr = $(this).parents('tr');
                     });
 
+                    var $pretrainedtab_prev_clicked_tr = null;
+                    $("input:radio[name=pretrained_networks]").click(function(){
+                        if ($pretrainedtab_prev_clicked_tr != null) {
+                            $pretrainedtab_prev_clicked_tr.find(".btn.btn-sm").css('visibility', 'hidden');
+                        }
+                        var framework_badge = $(this).parents('td').find(".badge").text();
+                        setFramework(framework_badge);  //sets the framework value based on the job selected in previous networks tab.
+                        $(this).parents('tr').find(".btn.btn-sm").css('visibility', 'visible');
+                        $(this).parents('tr').find(".form-control").css('visibility', 'visible');
+                        $pretrainedtab_prev_clicked_tr = $(this).parents('tr');
+                    });
+
                     //fix to the following issue: when validation fails and the screen was re-displayed, the selected radio buttons in "previous networks" tab remains selected but the select input field and customize button beside the selected previous network is in hidden status, which is wrong. same issue exists in standard networks tab. The below code ensures that select field and customize button beside selected radio button will be visible even when validation fails.
 
                     if($("input:radio[name=standard_networks]").is(":checked")) {
@@ -515,6 +527,11 @@ function setFramework(fwid)
                         $prevtab_prev_clicked_tr =  $("input:radio[name=previous_networks]:checked").parents('tr');
                         $prevtab_prev_clicked_tr.find(".btn.btn-sm").css('visibility', 'visible');
                         $prevtab_prev_clicked_tr.find(".form-control").css('visibility', 'visible');
+                    }
+
+                    if($("input:radio[name=pretrained_networks]").is(":checked")) {
+                        $prevtab_prev_clicked_tr =  $("input:radio[name=pretrained_networks]:checked").parents('tr');
+                        $prevtab_prev_clicked_tr.find(".btn.btn-sm").css('visibility', 'visible');
                     }
 
                 </script>

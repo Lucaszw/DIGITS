@@ -690,8 +690,6 @@
 })();
 
 $(document).ready(function() {
-    var pretrainedModel = new PretrainedModel({url: $("#uploadPretrainedModel").attr("href")});
-    $("#uploadPretrainedModel").on("click", pretrainedModel.render);
 
     // Ideally this should be handled with an angularjs directive, but
     // for now is a global click event.

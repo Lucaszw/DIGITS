@@ -22,17 +22,17 @@ class UploadPretrainedModelTask(Task):
     A task for uploading pretrained models
     """
 
-    def __init__(self, weights_path, model_def_path, labels_path=None, **kwargs):
+    def __init__(self, weights_path, model_def_path, labels_path=None, framework="caffe", **kwargs):
         """
         Arguments:
-        weights_path -- path to model weights (**.caffemodel)
-        model_def_path  -- path to model definition (**.prototxt)
+        weights_path -- path to model weights (**.caffemodel or ***.t7)
+        model_def_path  -- path to model definition (**.prototxt or ***.lua)
         """
-
-        # memorize parameters
         self.weights_path = weights_path
         self.model_def_path = model_def_path
         self.labels_path = labels_path
+        self.framework = framework
+
         # resources
         self.gpu = None
 
@@ -78,8 +78,12 @@ class UploadPretrainedModelTask(Task):
     @override
     def run(self, resources):
         env = os.environ.copy()
-        self.move_file(self.weights_path, "model.caffemodel")
-        self.move_file(self.model_def_path, "original.prototxt")
+        if self.framework == "caffe":
+            self.move_file(self.weights_path, "model.caffemodel")
+            self.move_file(self.model_def_path, "original.prototxt")
+        else:
+            self.move_file(self.weights_path, "model.t7")
+            self.move_file(self.model_def_path, "original.lua")
 
         if self.labels_path is not None:
             self.move_file(self.labels_path, "labels.txt")

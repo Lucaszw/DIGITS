@@ -176,13 +176,15 @@ def json_dict(job, model_output_fields):
 
     if isinstance(job, dataset.DatasetJob):
         d.update({ 'type': 'dataset' })
+
     if isinstance(job, model.ModelJob):
         d.update({ 'type': 'model' })
+
     if isinstance(job, pretrained_model.PretrainedModelJob):
         model_output_fields.add("has_labels")
         d.update({
         'type': 'pretrained_model',
-        'framework': 'caffe',
+        'framework': job.framework,
         'has_labels': "&#10004;" if job.has_labels else "&#10006;"
         })
     return d

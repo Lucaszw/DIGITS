@@ -19,6 +19,47 @@ def get_tempfile(f, suffix):
     os.close(temp[0])
     return path
 
+def validateCaffeFiles(files):
+    """
+    Upload a caffemodel
+    """
+    # Validate model weights:
+    if str(files['weights_file'].filename) is '':
+        raise werkzeug.exceptions.BadRequest('Missing weights file')
+    elif files['weights_file'].filename.rsplit('.',1)[1] != "caffemodel" :
+        raise werkzeug.exceptions.BadRequest('Weights must be a .caffemodel file')
+
+    # Validate model definition:
+    if str(files['model_def_file'].filename) is '':
+        raise werkzeug.exceptions.BadRequest('Missing model definition file')
+    elif files['model_def_file'].filename.rsplit('.',1)[1] != "prototxt" :
+        raise werkzeug.exceptions.BadRequest('Model definition must be .prototxt file')
+
+    weights_path   = get_tempfile(flask.request.files['weights_file'],".caffemodel")
+    model_def_path = get_tempfile(flask.request.files['model_def_file'],".prototxt")
+
+    return (weights_path, model_def_path)
+
+def validateTorchFiles(files):
+    """
+    Upload a torch model
+    """
+    # Validate model weights:
+    if str(files['weights_file'].filename) is '':
+        raise werkzeug.exceptions.BadRequest('Missing weights file')
+    elif files['weights_file'].filename.rsplit('.',1)[1] != "t7" :
+        raise werkzeug.exceptions.BadRequest('Weights must be a .t7 file')
+
+    # Validate model definition:
+    if str(files['model_def_file'].filename) is '':
+        raise werkzeug.exceptions.BadRequest('Missing model definition file')
+    elif files['model_def_file'].filename.rsplit('.',1)[1] != "lua" :
+        raise werkzeug.exceptions.BadRequest('Model definition must be .lua file')
+
+    weights_path   = get_tempfile(flask.request.files['weights_file'],".t7")
+    model_def_path = get_tempfile(flask.request.files['model_def_file'],".lua")
+
+    return (weights_path, model_def_path)
 
 @utils.auth.requires_login
 @blueprint.route('/new', methods=['POST'])
@@ -29,31 +70,23 @@ def new():
     labels_path = None
     framework   = None
 
-    # Validate model weights:
-    if str(flask.request.files['weights_file'].filename) is '':
-        raise werkzeug.exceptions.BadRequest('Missing weights file')
-    elif flask.request.files['weights_file'].filename.rsplit('.',1)[1] != "caffemodel" :
-        raise werkzeug.exceptions.BadRequest('Weights must be a .caffemodel file')
+    form  = flask.request.form
+    files = flask.request.files
 
-    # Validate model definition:
-    if str(flask.request.files['model_def_file'].filename) is '':
-        raise werkzeug.exceptions.BadRequest('Missing model definition file')
-    elif flask.request.files['model_def_file'].filename.rsplit('.',1)[1] != "prototxt" :
-        raise werkzeug.exceptions.BadRequest('Model definition must be .prototxt file')
-
-    if 'framework' not in flask.request.form:
-        framework = None
+    if 'framework' not in form:
+        framework = "caffe"
     else:
-        framework = flask.request.form['framework']
+        framework = form['framework']
 
     if 'job_name' not in flask.request.form:
         raise werkzeug.exceptions.BadRequest('Missing job name')
     elif str(flask.request.form['job_name']) is '':
         raise werkzeug.exceptions.BadRequest('Missing job name')
 
-    weights_path   = get_tempfile(flask.request.files['weights_file'],".caffemodel")
-    model_def_path = get_tempfile(flask.request.files['model_def_file'],".prototxt")
-
+    if framework == "caffe":
+        weights_path, model_def_path = validateCaffeFiles(files)
+    else:
+        weights_path, model_def_path = validateTorchFiles(files)
 
     if str(flask.request.files['labels_file'].filename) is not '':
         labels_path = get_tempfile(flask.request.files['labels_file'],".txt")

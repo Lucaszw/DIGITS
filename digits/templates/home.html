@@ -10,9 +10,6 @@
 <script type="text/javascript" src="{{ url_for('static', filename='js/ngStorage.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.sparkline.min.js') }}"></script>
 
-<!-- Components: -->
-<script type="text/javascript" src="{{ url_for('static', filename='js/components/PretrainedModel.js') }}"></script>
-
 <!-- Main: -->
 <script type="text/javascript" src="{{ url_for('static', filename='js/home_app.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/table_selection.css') }}">
@@ -270,4 +267,7 @@
         </div>
     </section>
 </div>
+
+{% include "partials/home/upload_pretrained_model.html" %}
+
 {% endblock %}

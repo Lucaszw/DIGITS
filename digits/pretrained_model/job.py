@@ -23,14 +23,21 @@ class PretrainedModelJob(Job):
             weights_path,
             model_def_path,
             labels_path,
+            framework,
             job_dir=self.dir()
         ))
 
     def get_weights_path(self):
-        return self.dir()+"/model.caffemodel"
+        if self.framework == "caffe":
+            return self.dir()+"/model.caffemodel"
+        else:
+            return self.dir()+"/model.t7"
 
     def get_model_def_path(self):
-        return self.dir()+"/original.prototxt"
+        if self.framework == "caffe":
+            return self.dir()+"/original.prototxt"
+        else:
+            return self.dir()+"/original.lua"
 
     @override
     def job_type(self):
