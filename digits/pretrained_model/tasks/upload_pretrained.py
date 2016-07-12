@@ -82,7 +82,7 @@ class UploadPretrainedModelTask(Task):
             self.move_file(self.weights_path, "model.caffemodel")
             self.move_file(self.model_def_path, "original.prototxt")
         else:
-            self.move_file(self.weights_path, "model.t7")
+            self.move_file(self.weights_path, "_Model.t7")
             self.move_file(self.model_def_path, "original.lua")
 
         if self.labels_path is not None:

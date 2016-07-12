@@ -94,6 +94,15 @@ class TorchFramework(Framework):
         return previous_network
 
     @override
+    def get_network_from_path(self,path):
+        """
+        return network object from a file path
+        """
+        with open(path, 'r') as f:
+            network=f.read()
+        return network
+
+    @override
     def validate_network(self, data):
         """
         validate a network
@@ -169,8 +178,3 @@ class TorchFramework(Framework):
                 return output
         finally:
             os.remove(temp_network_path)
-
-
-
-
-

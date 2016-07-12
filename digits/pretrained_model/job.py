@@ -31,7 +31,7 @@ class PretrainedModelJob(Job):
         if self.framework == "caffe":
             return self.dir()+"/model.caffemodel"
         else:
-            return self.dir()+"/model.t7"
+            return self.dir()+"/_Model.t7"
 
     def get_model_def_path(self):
         if self.framework == "caffe":
