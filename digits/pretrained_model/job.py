@@ -39,6 +39,11 @@ class PretrainedModelJob(Job):
         else:
             return self.dir()+"/original.lua"
 
+    def get_model_def(self):
+        with open(self.get_model_def_path(), 'r') as myfile:
+            data=myfile.read()
+        return data
+
     @override
     def job_type(self):
         return "Pretrained Model"

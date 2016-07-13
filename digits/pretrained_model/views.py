@@ -7,6 +7,7 @@ from digits import dataset, extensions, model, utils
 from digits.webapp import app, scheduler
 from digits.pretrained_model import PretrainedModelJob
 from digits.utils.routing import request_wants_json, job_from_request
+from digits.views import get_job_list
 from digits import utils
 import werkzeug.exceptions
 
@@ -19,7 +20,7 @@ def get_tempfile(f, suffix):
     os.close(temp[0])
     return path
 
-def validateCaffeFiles(files):
+def validate_caffe_files(files):
     """
     Upload a caffemodel
     """
@@ -40,7 +41,7 @@ def validateCaffeFiles(files):
 
     return (weights_path, model_def_path)
 
-def validateTorchFiles(files):
+def validate_torch_files(files):
     """
     Upload a torch model
     """
@@ -60,6 +61,22 @@ def validateTorchFiles(files):
     model_def_path = get_tempfile(flask.request.files['model_def_file'],".lua")
 
     return (weights_path, model_def_path)
+
+def format_job_name(job):
+    return {"name": job.name(), "id": job.id()}
+
+@blueprint.route('/get_outputs.json', methods=['GET'])
+def get_outputs():
+    job = scheduler.get_job(flask.request.args["job_id"])
+
+    return flask.jsonify({"model_def": job.get_model_def()})
+
+@utils.auth.requires_login
+@blueprint.route('/layer_visualizations', methods=['GET'])
+def layer_visualizations():
+    jobs = [format_job_name(x) for x in get_job_list(PretrainedModelJob,False)]
+    return flask.render_template("pretrained_models/layer_visualizations.html",
+            jobs=jobs)
 
 @utils.auth.requires_login
 @blueprint.route('/new', methods=['POST'])
@@ -84,9 +101,9 @@ def new():
         raise werkzeug.exceptions.BadRequest('Missing job name')
 
     if framework == "caffe":
-        weights_path, model_def_path = validateCaffeFiles(files)
+        weights_path, model_def_path = validate_caffe_files(files)
     else:
-        weights_path, model_def_path = validateTorchFiles(files)
+        weights_path, model_def_path = validate_torch_files(files)
 
     if str(flask.request.files['labels_file'].filename) is not '':
         labels_path = get_tempfile(flask.request.files['labels_file'],".txt")
@@ -97,7 +114,7 @@ def new():
         labels_path,
         framework,
         username = utils.auth.get_username(),
-        name = flask.request.form['job_name'],
+        name = flask.request.form['job_name']
     )
 
     scheduler.add_job(job)
