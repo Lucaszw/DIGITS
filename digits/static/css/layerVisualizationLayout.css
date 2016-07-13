@@ -1,0 +1,33 @@
+html, body, .container {
+  height: 100%;
+}
+body {
+  background: #F8F8F8;
+}
+
+.subtle {
+  font-style: italic;
+  font-size: 9px;
+}
+.fixed-fluid-container {
+   height: 100%;
+   overflow: hidden;
+   margin-top: 10px;
+}
+
+.fixed-fluid-container .panel {
+  height: 100%;
+}
+.layout-left {
+    width: 200px;
+    padding: 5px;
+    height: 100%;
+    float: left;
+    overflow: hidden;
+}
+.layout-right {
+    float: none;
+    width: auto;
+    padding: 5px;
+    height: 100%;
+}​​
