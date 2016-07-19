@@ -6,6 +6,7 @@
 
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/layerVisualizationLayout.css') }}">
+<script src="{{ url_for('static', filename='js/chroma.min.js') }}" ></script>
 <script src="{{ url_for('static', filename='js/pretrained_models/LayerVisualizations.js') }}" ></script>
 <script src="{{ url_for('static', filename='js/layer_visualizations/modelTree.js') }}" ></script>
 <script src="{{ url_for('static', filename='js/layer_visualizations/readCaffeModel.js') }}" ></script>
@@ -20,26 +21,21 @@
 
 <div class="fixed-fluid-container">
   <div class="layout-left">
-    <div class="panel panel-default text-center" style="padding:3px;overflow:hidden;">
+    <div class="panel panel-default text-center" style="padding:3px;overflow-x:hidden;">
       <b>Pretrained Jobs:</b>
       <div id="pretrained_jobs"></div>
       <br/>
-      <b>Saved Images:</b>
       <div id="image_carousel"></div>
     </div>
   </div>
-  <div class="layout-right"><div style="overflow:hidden;" class="panel panel-default" id="treeContainer"></div></div>
+  <div class="layout-right"><div style="overflow:hidden;" class="panel panel-default" id="tree_container"></div></div>
 </div>
 
 
 <script>
-  var carousel = new LayerVisualizations.Carousel("#image_carousel");
-  var jobs = new LayerVisualizations.Jobs("#pretrained_jobs",{
-    jobs: {{jobs|tojson}},
-    actions: new LayerVisualizations.Actions()
-  });
-
-  carousel.render();
-  jobs.render();
+  var layerVisualizations = new LayerVisualizations("#tree_container");
+  layerVisualizations.initPanel();
+  layerVisualizations.initCarousel("#image_carousel");
+  layerVisualizations.initJobs("#pretrained_jobs",{jobs: {{jobs|tojson}} });
 </script>
 {% endblock %}

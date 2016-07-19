@@ -9,6 +9,21 @@ var PretrainedModel = function(props){
   self.container = d3.select(props.selector);
   self.innerContainer = null;
   self.frameworkSelector = null;
+  self.frameworks = [
+    {text: "Caffe", value: "caffe"},
+    {text: "Torch", value: "torch"}
+  ];
+  self.resize_channels = [
+    {text: "Color", value: 3},
+    {text: "Grayscale", value: 1}
+  ];
+
+  self.resize_modes = [
+    {text:"Squash", value: "squash"},
+    {text: "Crop", value: "crop"},
+    {text: "Fill", value: "fill"},
+    {text: "Half Crop, Half Fill", value: "half_crop"}
+  ];
 
   self.frameworkChanged = function(){
     var nextFramework = self.frameworkSelector.property("value");
@@ -18,15 +33,38 @@ var PretrainedModel = function(props){
       self.renderCaffeForm();
     }
   };
+  self.newRow = function(){
+    return self.container.append("div").attr("class","row");
+  };
 
   self.render = function(){
     self.container.html('');
-    var row = self.container.append("div").attr("class","row");
+    var row = self.newRow();
     inputs.field(row.append("div").attr("class","col-xs-6"),"text","Jobname", "job_name");
 
     self.frameworkSelector = inputs.select(
-      row.append("div").attr("class","col-xs-6"),["caffe", "torch"],"Framework","framework"
+      row.append("div").attr("class","col-xs-6"),self.frameworks,"Framework","framework"
     );
+
+    row = self.newRow();
+    row.style("background", "whitesmoke");
+    row.style("border-radius", "5px 5px 0px 0px");
+    inputs.select(
+      row.append("div").attr("class","col-xs-6"),
+        self.resize_channels,"Image Type","image_type"
+    );
+
+    inputs.select(
+      row.append("div").attr("class","col-xs-6"),
+        self.resize_modes,"Resize Mode","resize_mode"
+    );
+
+    row = self.newRow();
+    row.style("background", "whitesmoke");
+    row.style("border-radius", "0px 0px 5px 5px");
+    inputs.field(row.append("div").attr("class","col-xs-6"),"number","Width", "width").attr("value",224);
+    inputs.field(row.append("div").attr("class","col-xs-6"),"number","Height", "height").attr("value",224);
+
     self.frameworkSelector.on("change", self.frameworkChanged);
     self.innerContainer = self.container.append("div");
     self.renderCaffeForm();
@@ -73,8 +111,8 @@ PretrainedModel.mixins = {
 
     mySelect.selectAll('option').data(data).enter()
       .append("option")
-        .attr("value",function(d){return d})
-        .text(function(d){return d});
+        .attr("value",function(d){return d.value})
+        .text(function(d){return d.text});
 
     return mySelect;
 
@@ -83,7 +121,7 @@ PretrainedModel.mixins = {
     var group = obj.append("div").attr("class","form-group");
     group.append("label")
         .attr("for",name).html(label);
-    group.append("input")
+    return group.append("input")
       .attr({type: type, class: "form-control", name: name});
   }
 

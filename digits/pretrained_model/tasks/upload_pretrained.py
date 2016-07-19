@@ -14,6 +14,10 @@ from digits import device_query
 from digits.task import Task
 from digits.utils import subclass, override
 from digits.status import Status
+from digits import frameworks
+from digits.framework_helpers import caffe_helpers
+
+
 import subprocess
 
 @subclass
@@ -22,14 +26,16 @@ class UploadPretrainedModelTask(Task):
     A task for uploading pretrained models
     """
 
-    def __init__(self, weights_path, model_def_path, labels_path=None, framework="caffe", **kwargs):
+    def __init__(self, weights_path, model_def_path, image_info, labels_path=None, framework="caffe",**kwargs):
         """
         Arguments:
         weights_path -- path to model weights (**.caffemodel or ***.t7)
         model_def_path  -- path to model definition (**.prototxt or ***.lua)
+        image_info -- a dictionary containing image_type, resize_mode, width, and height
         """
         self.weights_path = weights_path
         self.model_def_path = model_def_path
+        self.image_info = image_info
         self.labels_path = labels_path
         self.framework = framework
 
@@ -71,6 +77,26 @@ class UploadPretrainedModelTask(Task):
                 return reserved_resources
         return None
 
+    def get_labels(self):
+        labels = []
+        if self.labels_path is not None:
+            with open(self.job_dir+"/labels.txt") as f:
+                labels = f.readlines()
+        return labels
+
+    def write_deploy(self):
+        # get handle to framework object
+        fw = frameworks.get_framework_by_id("caffe")
+        model_def_path  = self.job_dir+"/original.prototxt"
+        network = fw.get_network_from_path(model_def_path)
+
+        num_categories = 0
+
+        channels  = int(self.image_info["image_type"])
+        image_dim = [ int(self.image_info["width"]), int(self.image_info["height"]), channels ]
+
+        caffe_helpers.save_deploy_file_classification(network,self.job_dir,len(self.get_labels()),None,image_dim,None)
+
     def move_file(self,input, output):
         args  = ["mv", input, self.job_dir+"/"+output]
         p = subprocess.Popen(args)
@@ -87,5 +113,8 @@ class UploadPretrainedModelTask(Task):
 
         if self.labels_path is not None:
             self.move_file(self.labels_path, "labels.txt")
+
+        if self.framework == "caffe":
+            self.write_deploy()
 
         self.status = Status.DONE

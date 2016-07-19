@@ -1,14 +1,17 @@
+/* Force Panels to extend accross entire height of page */
 html, body, .container {
   height: 100%;
 }
 body {
   background: #F8F8F8;
 }
-
+/* Additional text styling for buttons */
 .subtle {
   font-style: italic;
   font-size: 9px;
 }
+
+/* Fixed width on left panel, Fluid/dynamic width on right */
 .fixed-fluid-container {
    height: 100%;
    overflow: hidden;
@@ -31,3 +34,59 @@ body {
     padding: 5px;
     height: 100%;
 }​​
+
+/* Image Upload Button */
+.file-upload {
+    position: relative;
+    display: block !important;
+    overflow: hidden;
+}
+.file-upload input.upload {
+    position: absolute;
+    display: block;
+    top: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0;
+}
+
+/* Spinning Glyphicon For Overlay */
+.glyphicon-spin {
+  -webkit-animation: spin 1000ms infinite linear;
+  animation: spin 1000ms infinite linear;
+}
+@-webkit-keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
+}
+@keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
+}
+
+/* Cross-Component Layout Styles*/
+
+.component-outer{
+  /* Used By Overlay and Panel, to popover an existing div */
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
