@@ -27,7 +27,6 @@ Perform inference on a list of images using the specified model
 """
 
 def get_activations(output_dir,net,image_path, height, width, channels, resize_mode):
-    # TODO: retrive image dimensions and resize mode (height,width, channels)
 
     image = utils.image.load_image(image_path)
     image = utils.image.resize_image(image,

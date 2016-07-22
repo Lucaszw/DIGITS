@@ -56,7 +56,7 @@ function generateTorchTree(nodes){
 
       child.parents = [prevNode];
 
-      if (i != 0) prevNode = node.contents[i-1];
+      prevNode = child;
 
       if (isContainer(child.type)) {
         var exit = isParallel(child.type) ? branchContents(child) : chainContents(child);
@@ -89,7 +89,7 @@ function generateTorchTree(nodes){
     });
 
     getLeafNodes(leafNodes,node);
-    var exitIndex = _.max(_.pluck(leafNodes, "index")) + 0.5;
+    var exitIndex = _.max(_.pluck(leafNodes, "index")) + 0.4;
     var exit = {index: exitIndex, type: "Concat", children: [], parents: [], isLast: true}
     _.each(leafNodes, function(leaf){
       leaf.children = [exit];

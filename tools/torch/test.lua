@@ -385,8 +385,6 @@ else
             layer_id = layer_id + 1
         end
 
-        -- print(chain .. " , " .. torch.type(layer))
-
         if layer.modules then
           for i=1,#layer.modules do
             child = layer:get(i)

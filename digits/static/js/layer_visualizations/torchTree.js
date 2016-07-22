@@ -21,21 +21,6 @@ function loadTorchTree(selector){
     g.setEdge(e.source.index, e.target.index,{label: "", style: "fill: none; stroke: "+COLORS[types.indexOf(e.target.type)]})
   });
 
-  // g.setEdge("0",     "1",     { label: "" });
-  // g.setEdge("1",     "2",     { label: "" });
-  // g.setEdge("1",     "3",     { label: "" });
-  // g.setEdge("2",     "4",     { label: "" });
-  // g.setEdge("3",     "4",     { label: "" });
-
-  // Set some general styles
-  // g.nodes().forEach(function(v) {
-  //   console.log(v);
-  //   var node = g.node(v);
-  //   node.rx = node.ry = 5;
-  // });
-  // Add some custom colors based on state
-  // g.node('0').style = "fill: #f77";
-
 
   var inner = svg.append("g").attr("transform", "translate(" + 0 + "," + 0 + ")scale(" + 0.1 + ")");
   // Set up zoom support
