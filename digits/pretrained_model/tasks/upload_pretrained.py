@@ -17,6 +17,9 @@ from digits.status import Status
 from digits import frameworks
 from digits.framework_helpers import caffe_helpers
 
+# TODO: Move to torch framework helpers
+from digits.config import config_value
+
 
 import subprocess
 
@@ -84,37 +87,52 @@ class UploadPretrainedModelTask(Task):
                 labels = f.readlines()
         return labels
 
-    def write_deploy(self):
+    def write_deploy(self,env):
         # get handle to framework object
         fw = frameworks.get_framework_by_id("caffe")
         model_def_path  = self.job_dir+"/original.prototxt"
         network = fw.get_network_from_path(model_def_path)
-
-        num_categories = 0
 
         channels  = int(self.image_info["image_type"])
         image_dim = [ int(self.image_info["width"]), int(self.image_info["height"]), channels ]
 
         caffe_helpers.save_deploy_file_classification(network,self.job_dir,len(self.get_labels()),None,image_dim,None)
 
-    def move_file(self,input, output):
+    def write_torch_layers(self,env):
+        # Write torch layers to json for layerwise graph visualization
+        if config_value('torch_root') == '<PATHS>':
+            torch_bin = 'th'
+        else:
+            torch_bin = os.path.join(config_value('torch_root'), 'bin', 'th')
+
+        args = [torch_bin,
+                os.path.join(os.path.dirname(os.path.dirname(digits.__file__)),'tools','torch','toJSON.lua'),
+                '--network=%s' % "original",
+                '--output=%s' % self.job_dir + "/model_def.json",
+                ]
+
+        p = subprocess.Popen(args,cwd=self.job_dir,env=env)
+
+    def move_file(self,input, output,env):
         args  = ["mv", input, self.job_dir+"/"+output]
-        p = subprocess.Popen(args)
+        p = subprocess.Popen(args,env=env)
 
     @override
     def run(self, resources):
         env = os.environ.copy()
         if self.framework == "caffe":
-            self.move_file(self.weights_path, "model.caffemodel")
-            self.move_file(self.model_def_path, "original.prototxt")
+            self.move_file(self.weights_path, "model.caffemodel",env)
+            self.move_file(self.model_def_path, "original.prototxt",env)
         else:
-            self.move_file(self.weights_path, "_Model.t7")
-            self.move_file(self.model_def_path, "original.lua")
+            self.move_file(self.weights_path, "_Model.t7",env)
+            self.move_file(self.model_def_path, "original.lua",env)
 
         if self.labels_path is not None:
-            self.move_file(self.labels_path, "labels.txt")
+            self.move_file(self.labels_path, "labels.txt",env)
 
         if self.framework == "caffe":
-            self.write_deploy()
+            self.write_deploy(env)
+        else:
+            self.write_torch_layers(env)
 
         self.status = Status.DONE

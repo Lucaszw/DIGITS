@@ -164,7 +164,7 @@ LayerVisualizations.Actions = function(props){
           var json = JSON.parse(xhr.responseText);
           parent.carousel.load(json);
         } else {
-          console.log("Failed to Upload File");
+          console.error("Failed to Upload File");
         }
      };
     // Send Request:
@@ -429,12 +429,17 @@ LayerVisualizations.Jobs = function(selector,props){
   }
 
   self.load = function(json){
-    console.log("Model Def:");
-    console.log(json.model_def);
-    var d = getTreeData("text",json.model_def);
-    self.layers = d.layers;
-    self.tree   = d.tree;
-    loadTree(parent.tree_container.node());
+    console.log(json.framework);
+    console.log(parent.tree_container.node());
+    if (json.framework == "caffe"){
+      var d = getTreeData("text",json.model_def);
+      self.layers = d.layers;
+      self.tree   = d.tree;
+      loadTree(parent.tree_container.node());
+    } else {
+      generateTorchTree(json.model_def);
+      loadTorchTree(parent.tree_container.node());
+    }
     parent.carousel.render(json.images);
   }
 

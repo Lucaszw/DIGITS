@@ -11,6 +11,18 @@ body {
   font-size: 9px;
 }
 
+/* Graph Styling*/
+.node rect {
+  stroke: #333;
+  fill: #fff;
+}
+
+.edgePath path {
+  stroke: #333;
+  fill: #333;
+  stroke-width: 1.5px;
+}
+
 /* Fixed width on left panel, Fluid/dynamic width on right */
 .fixed-fluid-container {
    height: 100%;

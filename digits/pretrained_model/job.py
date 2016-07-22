@@ -54,7 +54,7 @@ class PretrainedModelJob(Job):
         if self.framework == "caffe":
             return self.dir()+"/original.prototxt"
         else:
-            return self.dir()+"/original.lua"
+            return self.dir()+"/model_def.json"
 
     def get_model_def(self):
         with open(self.get_model_def_path(), 'r') as myfile:

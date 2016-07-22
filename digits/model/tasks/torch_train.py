@@ -619,7 +619,8 @@ class TorchTrainTask(TrainTask):
             #    |  |- weights
             #    |- 2
             for layer_id,layer in vis_db['layers'].items():
-                layer_desc = layer['name'][...].tostring()
+                layer_desc  = layer['name'][...].tostring()
+                layer_chain = layer["chain"][...].tostring()
                 if 'Sequential' in layer_desc or 'Parallel' in layer_desc:
                     # ignore containers
                     continue
@@ -636,6 +637,7 @@ class TorchTrainTask(TrainTask):
                                              {
                                                  'id':         idx,
                                                  'name':       layer_desc,
+                                                 'chain':       layer_chain,
                                                  'vis_type':   'Activations',
                                                  'vis': vis,
                                                  'data_stats': {
@@ -664,6 +666,7 @@ class TorchTrainTask(TrainTask):
                                            {
                                                'id':          idx,
                                                'name':        layer_desc,
+                                               'chain':       layer_chain,
                                                'vis_type':    'Weights',
                                                'vis':  vis,
                                                'param_count': parameter_count,

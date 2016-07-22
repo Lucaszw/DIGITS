@@ -122,7 +122,7 @@ def get_outputs():
         f = h5py.File(job.get_activations_path())
         data = [get_data_blob(k,v) for k,v in f.items()]
 
-    return flask.jsonify({"model_def": job.get_model_def(), "images": data})
+    return flask.jsonify({"model_def": job.get_model_def(), "images": data, "framework": job.framework})
 
 @utils.auth.requires_login
 @blueprint.route('/layer_visualizations', methods=['GET'])
