@@ -13,12 +13,12 @@ function loadTorchTree(selector){
   // States and transitions from RFC 793
 
   // Automatically label each of the nodes
-  graph.nodes.forEach(function(n,i){g.setNode(n.chain, {label: n.type, style: "fill: "+ COLORS[types.indexOf(n.type)]})});
+  graph.nodes.forEach(function(n,i){g.setNode(n.index, {label: n.type, style: "fill: "+ COLORS[types.indexOf(n.type)]})});
 
   // states.forEach(function(state) { g.setNode(state, { label: "BLAH" }); });
   // Set up the edges
   graph.links.forEach(function(e){
-    g.setEdge(e.source.chain, e.target.chain,{label: "", style: "stroke: "+COLORS[types.indexOf(e.target.type)]})
+    g.setEdge(e.source.index, e.target.index,{label: "", style: "fill: none; stroke: "+COLORS[types.indexOf(e.target.type)]})
   });
 
   // g.setEdge("0",     "1",     { label: "" });
