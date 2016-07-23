@@ -40,12 +40,77 @@ body {
     float: left;
     overflow: hidden;
 }
+
+
 .layout-right {
-    float: none;
-    width: auto;
-    padding: 5px;
-    height: 100%;
-}​​
+  float: none;
+  width: auto;
+  padding: 5px;
+  height: 100%;
+}
+
+
+
+
+/* Layer Panel Styles */
+
+.panel-heading {
+  position:relative;
+  z-index: 1;
+}
+
+.panel-content {
+  padding: 0px;
+  height: 100% ;
+  position: relative ;
+  top: -41px ;
+  padding-top:44px;
+  overflow:hidden;
+}
+
+.panel-content .outputs {
+  height: 99%;
+  /* Hide scroll bar, but still allow scroll */
+  margin-right:-13px;
+  /* Increase Scroll Range to avoid un-accessable buttons*/
+  padding-bottom: 110px;
+  line-height: 0px;
+  overflow-y:scroll;
+  padding-top: 11px;
+}
+
+.panel-content .panel-nav {
+  background: rgba(255,255,255,0.7);
+  position: absolute;
+  padding-top: 34px;
+  padding-bottom: 34px;
+  top: 100%;
+  margin-top:-111px;
+  width:100%;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.panel-nav nav {
+  padding: 0px;
+  position: relative;
+}
+
+.panel-nav .pagination {
+  margin: 0px;
+  padding: 0px;
+  position:relative;
+}
+.canvas-hover {
+  margin-left: -25px !important;
+  margin-top: -25px !important;
+  height: 100px !important;
+  width: 100px !important;
+  position:relative !important;
+  left: 12.5px;
+  top: 12.5px;
+  z-index: 1;
+}
 
 /* Image Upload Button */
 .file-upload {

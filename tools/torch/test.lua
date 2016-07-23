@@ -352,7 +352,11 @@ else
       local filename = paths.concat(opt.save, 'vis.h5')
       logmessage.display(0,'Saving visualization to ' .. filename)
       local vis_db = hdf5.open(filename, 'w')
-      local layer_id = 0
+
+      vis_db:write('/layers/'.. 0 ..'/activations', inputs:float())
+      vis_db:write('/layers/'.. 0 ..'/chain', utils.stringToTensor("data"))
+      vis_db:write('/layers/'.. 0 ..'/name',  utils.stringToTensor("data"))
+      local layer_id = 1
 
       function traverseModel(layer, link, chain)
         local activations = layer.output

@@ -13,7 +13,7 @@ class PretrainedModelJob(Job):
     """
 
     def __init__(self, weights_path, model_def_path, labels_path=None,framework="caffe",
-                image_type="Color",resize_mode="Squash", width=224, height=224, **kwargs):
+                image_type="3",resize_mode="Squash", width=224, height=224, **kwargs):
         super(PretrainedModelJob, self).__init__(persistent = False, **kwargs)
 
         self.has_labels = labels_path is not None

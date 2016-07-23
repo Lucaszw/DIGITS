@@ -619,6 +619,7 @@ class TorchTrainTask(TrainTask):
             #    |  |- name
             #    |  |- activations
             #    |  |- weights
+            #    |  |- chain
             #    |- 2
             for layer_id,layer in vis_db['layers'].items():
                 layer_desc  = layer['name'][...].tostring()

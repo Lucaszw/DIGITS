@@ -35,7 +35,7 @@ PICKLE_VERSION = 3
 
 # Constants
 CAFFE_SOLVER_FILE = 'solver.prototxt'
-CAFFE_ORIGINAL_FILE = 'original.prototxt'
+CAFFE_MODEL_FILE = 'original.prototxt'
 CAFFE_TRAIN_VAL_FILE = 'train_val.prototxt'
 CAFFE_SNAPSHOT_PREFIX = 'snapshot'
 CAFFE_DEPLOY_FILE = 'deploy.prototxt'
@@ -86,7 +86,7 @@ class CaffeTrainTask(TrainTask):
         self.solver = None
 
         self.solver_file = CAFFE_SOLVER_FILE
-        self.original_file = CAFFE_ORIGINAL_FILE
+        self.model_file = CAFFE_MODEL_FILE
         self.train_val_file = CAFFE_TRAIN_VAL_FILE
         self.snapshot_prefix = CAFFE_SNAPSHOT_PREFIX
         self.deploy_file = CAFFE_DEPLOY_FILE
@@ -237,7 +237,7 @@ class CaffeTrainTask(TrainTask):
         Save solver, train_val and deploy files to disk
         """
         # Save the original network to file:
-        with open(self.path(self.original_file), 'w') as outfile:
+        with open(self.path(self.model_file), 'w') as outfile:
             text_format.PrintMessage(self.network, outfile)
 
         network = caffe_helpers.cleanedUpClassificationNetwork(self.network, len(self.get_labels()))
@@ -536,7 +536,7 @@ class CaffeTrainTask(TrainTask):
         assert train_feature_db_path is not None, 'Training images are required'
 
         # Save the origin network to file:
-        with open(self.path(self.original_file), 'w') as outfile:
+        with open(self.path(self.model_file), 'w') as outfile:
             text_format.PrintMessage(self.network, outfile)
 
         ### Split up train_val and deploy layers
@@ -1065,11 +1065,11 @@ class CaffeTrainTask(TrainTask):
         }
 
         # These attributes only available in more recent jobs:
-        if hasattr(self,"original_file"):
+        if hasattr(self,"model_file"):
             stats.update({
                 "caffe flavor": self.caffe_flavor,
                 "caffe version": self.caffe_version,
-                "network file": self.original_file,
+                "network file": self.model_file,
                 "digits version": self.digits_version
             })
 
@@ -1466,8 +1466,8 @@ class CaffeTrainTask(TrainTask):
                 "Network (train/val)": self.train_val_file,
                 "Network (deploy)": self.deploy_file
             }
-        if hasattr(self,"original_file"):
-            model_files.update({"Network (original)": self.original_file})
+        if hasattr(self,"model_file"):
+            model_files.update({"Network (original)": self.model_file})
         return model_files
 
     @override

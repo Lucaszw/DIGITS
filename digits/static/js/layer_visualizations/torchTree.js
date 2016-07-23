@@ -13,7 +13,7 @@ function loadTorchTree(selector){
   // States and transitions from RFC 793
 
   // Automatically label each of the nodes
-  graph.nodes.forEach(function(n,i){g.setNode(n.index, {label: n.type, style: "fill: "+ COLORS[types.indexOf(n.type)]})});
+  graph.nodes.forEach(function(n,i){g.setNode(n.index, {label: n.type, chain: n.chain, style: "fill: "+ COLORS[types.indexOf(n.type)]})});
 
   // states.forEach(function(state) { g.setNode(state, { label: "BLAH" }); });
   // Set up the edges
@@ -21,8 +21,12 @@ function loadTorchTree(selector){
     g.setEdge(e.source.index, e.target.index,{label: "", style: "fill: none; stroke: "+COLORS[types.indexOf(e.target.type)]})
   });
 
+  g.nodes().forEach(function(v) {
+    var node = g.node(v);
+  });
 
   var inner = svg.append("g").attr("transform", "translate(" + 0 + "," + 0 + ")scale(" + 0.1 + ")");
+
   // Set up zoom support
   var zoom = d3.behavior.zoom().on("zoom", function() {
         inner.attr("transform", "translate(" + d3.event.translate + ")" +
@@ -43,6 +47,19 @@ function loadTorchTree(selector){
 
   zoom
     .translate([initX, initY])
-    .scale()
-    .event(svg);
+    .scale();
+
+  // Add click listeners to each layer:
+  inner.selectAll("g.node")
+    .on("click", function(d) {
+      // Emit and event which includes the target svg object, and layer info
+      var event = document.createEvent('Event');
+      event.initEvent('LayerClicked', true, true);
+      event.layer  = {name: g.node(d).chain};
+      event.svgTarget = d3.event.target;
+      document.dispatchEvent(event);
+
+  });
+
+  // .event(svg);
 }

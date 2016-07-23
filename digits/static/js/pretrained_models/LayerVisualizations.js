@@ -63,6 +63,13 @@ var LayerVisualizations = function(selector,props){
 
     items.exit().remove();
 
+    // Add hover effect
+    items.on("mouseover", function(){
+      d3.select(this).classed("canvas-hover", true);
+    });
+    items.on("mouseout", function(){
+      d3.select(this).classed("canvas-hover", false);
+    })
   };
 
 
@@ -91,8 +98,8 @@ var LayerVisualizations = function(selector,props){
             // If grayscale , convert to rgb using declared color map
             // use tanh scale, instead of linear scale to match pixel color
             // for better visual appeal:
-            // var c = 255*(Math.tanh(2*pixel));
-            var c = 255*pixel;
+            var c = 255*(Math.tanh(2*pixel));
+            // var c = 255*pixel;
             rgb = window.colormap[Math.floor(c)];
           }
 
@@ -108,7 +115,7 @@ var LayerVisualizations = function(selector,props){
   // Add listener for when a layer clicked:
   document.addEventListener("LayerClicked", function(e){
     self.layer = e.layer;
-    self.range = {min: 0 , max: 40};
+    self.range = {min: 0 , max: 48};
     self.dispatchInference();
   });
 
@@ -209,7 +216,7 @@ LayerVisualizations.Panel = function(selector,props){
         .attr("class", function(d){ return (d*step == range.min) ? "active" : ""})
         .style("cursor","pointer")
         .append("a")
-          .html(function(d){ return d*step+"-"+(d+1)*step})
+          .html(function(d){ return d })
           .on("click", function(d){
             self.updateOuputs(d,step);
           });
@@ -233,9 +240,9 @@ LayerVisualizations.Panel = function(selector,props){
     self.headingCenter = heading.append("div").attr("class", "text-center col-xs-offset-1 col-xs-10");
     self.headingRight  = heading.append("div").attr("class", "col-xs-1 text-right");
 
-    var panelBody = panel.append("div").attr("class", "panel-body");
-    self.body = panelBody.append("div");
-    self.nav = panelBody.append("div");
+    var panelBody = panel.append("div").attr("class", "panel-content");
+    self.body = panelBody.append("div").attr("class", "outputs");
+    self.nav = panelBody.append("div").attr("class", "panel-nav");
 
     self.drawCloseButton();
   };
@@ -429,8 +436,6 @@ LayerVisualizations.Jobs = function(selector,props){
   }
 
   self.load = function(json){
-    console.log(json.framework);
-    console.log(parent.tree_container.node());
     if (json.framework == "caffe"){
       var d = getTreeData("text",json.model_def);
       self.layers = d.layers;

@@ -125,8 +125,14 @@ class ActivationsTask(Task):
 
     @override
     def task_arguments(self, resources, env):
+
+        if self.pretrained_model.framework == "caffe":
+            inference_tool_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(digits.__file__))), 'tools', 'get_activations.py')
+        else:
+            inference_tool_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(digits.__file__))), 'tools', 'get_torch_activations.py')
+
         args = [sys.executable,
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(digits.__file__))), 'tools', 'get_activations.py'),
+            inference_tool_path,
             self.image_path,
             self.pretrained_model.dir()
             ]

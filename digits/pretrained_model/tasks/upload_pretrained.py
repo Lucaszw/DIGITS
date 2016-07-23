@@ -114,7 +114,7 @@ class UploadPretrainedModelTask(Task):
         p = subprocess.Popen(args,cwd=self.job_dir,env=env)
 
     def move_file(self,input, output,env):
-        args  = ["mv", input, self.job_dir+"/"+output]
+        args  = ["cp", input, self.job_dir+"/"+output]
         p = subprocess.Popen(args,env=env)
 
     @override
