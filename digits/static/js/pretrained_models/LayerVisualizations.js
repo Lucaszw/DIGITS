@@ -115,7 +115,7 @@ var LayerVisualizations = function(selector,props){
   // Add listener for when a layer clicked:
   document.addEventListener("LayerClicked", function(e){
     self.layer = e.layer;
-    self.range = {min: 0 , max: 48};
+    self.range = {min: 0 , max: 198};
     self.dispatchInference();
   });
 

@@ -45,7 +45,7 @@ function generateTorchTree(nodes){
     return (nodeType == "nn.Concat" || nodeType == "nn.Parallel" || nodeType == "nn.DepthConcat")
   }
 
-  function chainContents(node){
+  function chainContents(node, nodes){
     // Make the parent of each sibling its previous sibling
 
     node.children = [node.contents[0]];
@@ -59,7 +59,7 @@ function generateTorchTree(nodes){
       prevNode = child;
 
       if (isContainer(child.type)) {
-        var exit = isParallel(child.type) ? branchContents(child) : chainContents(child);
+        var exit = isParallel(child.type) ? branchContents(child,nodes) : chainContents(child,nodes);
         prevNode = child = exit;
         exit.isLast = false;
       }
@@ -67,30 +67,39 @@ function generateTorchTree(nodes){
       if (i != node.contents.length-1) child.children = [node.contents[i+1]];
       if (i == node.contents.length-1) child.isLast   = true;
     });
+
+    // Add an exit node:
     var exitIndex = prevNode.index + 0.5;
     var exit = {index: exitIndex, type: "s-exit", children: [], parents: [], isLast: true};
+    nodes.push(exit);
     prevNode.children = [exit];
     prevNode.isLast = false;
     exit.parents = [prevNode];
+
     return exit;
 
   }
 
-  function branchContents(node){
+  function branchContents(node,nodes){
     // Create branch structure, that terminates with the leaves
     // of each branch joining together
 
     var leafNodes = new Array();
     node.children = new Array();
+
+    // Connect all of concats children to its parents
+    var newParent = node.parents[0];
+    newParent.children = [];
+
     _.each(node.contents, function(child,i){
-      if (child.type == "nn.Sequential") chainContents(child);
-      child.parents = [node];
-      node.children.push(child);
+      if (child.type == "nn.Sequential") chainContents(child,nodes);
+      child.parents = [newParent];
+      newParent.children.push(child);
     });
 
-    getLeafNodes(leafNodes,node);
+    getLeafNodes(leafNodes,newParent);
     var exitIndex = _.max(_.pluck(leafNodes, "index")) + 0.4;
-    var exit = {index: exitIndex, type: "Concat", children: [], parents: [], isLast: true}
+    var exit = {index: exitIndex, type: "Concat", children: [], parents: [], isLast: true, chain: node.chain};
     _.each(leafNodes, function(leaf){
       leaf.children = [exit];
       leaf.isLast   = false;
@@ -98,6 +107,17 @@ function generateTorchTree(nodes){
     });
 
     return exit;
+  }
+
+  function removeNodes(nodes, type){
+    _.each( _.filter(nodes, function(n){return n.type == type}), function(n){
+      if (_.isUndefined(n.parents)) return;
+
+      var newParent   = n.parents[0];
+      var newChildren  = n.children;
+      _.each(newChildren, function(c){newParent.children.push(c); c.parents = [newParent] });
+      newParent.children = _.filter(newParent.children, function(c){ return c.type != type });
+    });
   }
 
   function getContainerContents(node){
@@ -109,7 +129,14 @@ function generateTorchTree(nodes){
     // if (node.type == "nn.Sequential") chainContents(node);
   });
 
-  chainContents(nodes[0]);
+  chainContents(nodes[0], nodes);
+
+  // Remove all exit blocks, and connect their children to their parents
+  removeNodes(nodes, "s-exit");
+
+  // Remove all sequence entry blocks and attatch to children:
+  removeNodes(nodes, "nn.Sequential");
+
   graph = toGraph(nodes[0]);
 
 }
