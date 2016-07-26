@@ -62,6 +62,7 @@ var PretrainedModel = function(props){
     row = self.newRow();
     row.style("background", "whitesmoke");
     row.style("border-radius", "0px 0px 5px 5px");
+
     inputs.field(row.append("div").attr("class","col-xs-6"),"number","Width", "width").attr("value",256);
     inputs.field(row.append("div").attr("class","col-xs-6"),"number","Height", "height").attr("value",256);
 

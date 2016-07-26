@@ -5,6 +5,8 @@ import digits
 from digits.utils import subclass, override
 from digits.status import Status
 from digits.pretrained_model.tasks import UploadPretrainedModelTask
+from digits import frameworks
+from digits.framework_helpers import caffe_helpers
 
 @subclass
 class CaffeUploadTask(UploadPretrainedModelTask):
@@ -29,6 +31,23 @@ class CaffeUploadTask(UploadPretrainedModelTask):
         """
         return self.job_dir+"/model.caffemodel"
 
+    @override
+    def get_deploy_path(self):
+        """
+        Get path to file containing model def for deploy/visualization
+        """
+        return self.job_dir+"/deploy.prototxt"
+
+    @override
+    def write_deploy(self,env):
+        # get handle to framework object
+        fw = frameworks.get_framework_by_id("caffe")
+        model_def_path  = self.get_model_def_path()
+        network = fw.get_network_from_path(model_def_path)
+
+        image_dim = [ int(self.image_info["width"]), int(self.image_info["height"]), int(self.image_info["image_type"]) ]
+
+        caffe_helpers.save_deploy_file_classification(network,self.job_dir,len(self.get_labels()),None,image_dim,None)
 
     @override
     def __setstate__(self, state):
@@ -44,4 +63,5 @@ class CaffeUploadTask(UploadPretrainedModelTask):
         if self.labels_path is not None:
             self.move_file(self.labels_path, "labels.txt",env)
 
+        self.write_deploy(env)
         self.status = Status.DONE

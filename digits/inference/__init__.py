@@ -3,4 +3,5 @@ from __future__ import absolute_import
 
 from .images import *
 from .job import InferenceJob
-
+from .activations import ActivationsJob
+from .weights import WeightsJob

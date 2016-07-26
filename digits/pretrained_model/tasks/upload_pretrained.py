@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import digits
 from digits.task import Task
 from digits.utils import subclass, override
+
 import subprocess
 
 @subclass
@@ -13,6 +14,7 @@ class UploadPretrainedModelTask(Task):
     """
 
     def __init__(self, **kwargs):
+
         """
         Arguments:
         weights_path -- path to model weights (**.caffemodel or ***.t7)
@@ -65,6 +67,19 @@ class UploadPretrainedModelTask(Task):
                 return reserved_resources
         return None
 
+    def get_labels(self):
+        labels = []
+        if self.labels_path is not None:
+            with open(self.job_dir+"/labels.txt") as f:
+                labels = f.readlines()
+        return labels
+
+
+    def move_file(self,input, output,env):
+        args  = ["cp", input, self.job_dir+"/"+output]
+        p = subprocess.Popen(args,env=env)
+
+
     def get_model_def_path(self):
         """
         Get path to model definition
@@ -77,6 +92,14 @@ class UploadPretrainedModelTask(Task):
         """
         raise NotImplementedError('Please implement me')
 
-    def move_file(self,input, output,env):
-        args  = ["cp", input, self.job_dir+"/"+output]
-        p = subprocess.Popen(args,env=env)
+    def get_deploy_path(self):
+        """
+        Get path to file containing model def for deploy/visualization
+        """
+        raise NotImplementedError('Please implement me')
+
+    def write_deploy(self):
+        """
+        Write model definition for deploy/visualization
+        """
+        raise NotImplementedError('Please implement me')

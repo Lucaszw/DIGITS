@@ -134,9 +134,11 @@ class InferenceTask(Task):
             # collect layer data, if applicable
             if 'layers' in db.keys():
                 for layer_id, layer in db['layers'].items():
+
                     visualization = {
                         'id': int(layer_id),
                         'name': layer.attrs['name'],
+                        'chain': layer.attrs['chain'],
                         'vis_type': layer.attrs['vis_type'],
                         'data_stats': {
                             'shape': layer.attrs['shape'],

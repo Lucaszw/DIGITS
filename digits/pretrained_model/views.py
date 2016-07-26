@@ -2,11 +2,18 @@ import flask
 import tempfile
 import os
 import h5py
+import json
 import numpy as np
 from digits import dataset, extensions, model, utils
 from digits.webapp import app, scheduler
 from digits.pretrained_model import PretrainedModelJob
+
+from digits.inference import ActivationsJob
+from digits.inference import WeightsJob
+
 from digits.utils.routing import request_wants_json, job_from_request
+from digits.views import get_job_list
+
 from digits import utils
 import werkzeug.exceptions
 
@@ -61,6 +68,94 @@ def validate_torch_files(files):
 
     return (weights_path, model_def_path)
 
+def get_data_blob(id, activations):
+    """ Get Data Blobs from Activation Blobs """
+    return {"id": id, "data": activations["data"][:][0].tolist()}
+
+def format_job_name(job):
+    return {"name": job.name(), "id": job.id()}
+
+@blueprint.route('/get_weights.json', methods=['GET'])
+def get_weights():
+    """ Return the weights for a given layer """
+    job = job_from_request()
+    args = flask.request.args
+    layer_name = args["layer_name"]
+    range_min  = int(args["range_min"])
+    range_max  = int(args["range_max"])
+    data   = []
+    stats  = {}
+    num_units = 0
+
+    if os.path.isfile(job.get_filters_path()):
+        f = h5py.File(job.get_filters_path())
+        if layer_name in f:
+            num_units = len(f[layer_name])
+            stats = json.loads(f[layer_name].attrs["stats"])
+            data = f[layer_name][:][range_min:range_max].tolist()
+
+    return flask.jsonify({"data": data, "length": num_units, "stats": stats })
+
+@blueprint.route('/get_inference.json', methods=['GET'])
+def get_inference():
+    """ Return the weights and activations for a given layer """
+    # TODO - Also get weights
+    job = job_from_request()
+    args = flask.request.args
+    layer_name = args["layer_name"]
+    image_id   = args["image_id"]
+    range_min  = int(args["range_min"])
+    range_max  = int(args["range_max"])
+
+    data   = []
+    num_units = 0
+    if os.path.isfile(job.get_activations_path()):
+        f = h5py.File(job.get_activations_path())
+        if image_id in f:
+            num_units = len(f[image_id][layer_name])
+            data = f[image_id][layer_name][:][range_min:range_max].tolist()
+
+    return flask.jsonify({"data": data, "length": num_units})
+
+@blueprint.route('/upload_image.json', methods=['POST'])
+def upload_image():
+    model_job = job_from_request()
+    image_path = get_tempfile(flask.request.files['image'],".png")
+
+    activations_job = ActivationsJob(
+        model_job,
+        image_path,
+        name     = "Upload Image",
+        username = utils.auth.get_username()
+    )
+
+    scheduler.add_job(activations_job)
+    activations_job.wait_completion()
+    scheduler.delete_job(activations_job)
+
+    f = h5py.File(model_job.get_activations_path())
+    image_id = str(len(f.keys())-1)
+    input_data = f[image_id]['data'][:][0]
+
+    return flask.jsonify({"data": input_data.tolist(), "id": image_id})
+
+@blueprint.route('/get_outputs.json', methods=['GET'])
+def get_outputs():
+    job  = scheduler.get_job(flask.request.args["job_id"])
+    data = []
+
+    if os.path.isfile(job.get_activations_path()):
+        f = h5py.File(job.get_activations_path())
+        data = [get_data_blob(k,v) for k,v in f.items()]
+
+    return flask.jsonify({"model_def": job.get_model_def(), "images": data, "framework": job.framework})
+
+@utils.auth.requires_login
+@blueprint.route('/layer_visualizations/<job_id>', methods=['GET'])
+def layer_visualizations(job_id):
+    job  = format_job_name(scheduler.get_job(job_id))
+    return flask.render_template("pretrained_models/layer_visualizations.html",job=job)
+
 @utils.auth.requires_login
 @blueprint.route('/new', methods=['POST'])
 def new():
@@ -105,5 +200,13 @@ def new():
     )
 
     scheduler.add_job(job)
+    job.wait_completion()
+
+    weights_job = WeightsJob(
+        job,
+        name     = flask.request.form['job_name'],
+        username = utils.auth.get_username()
+    )
+    scheduler.add_job(weights_job)
 
     return flask.redirect(flask.url_for('digits.views.home')), 302

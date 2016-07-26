@@ -41,11 +41,26 @@ class PretrainedModelJob(Job):
         else:
             self.tasks.append(TorchUploadTask(**taskKwargs))
 
+
     def get_weights_path(self):
         return self.tasks[0].get_weights_path()
 
     def get_model_def_path(self):
         return self.tasks[0].get_model_def_path()
+
+    def get_deploy_path(self):
+        return self.tasks[0].get_deploy_path()
+
+    def get_filters_path(self):
+        return self.dir()+"/filters.hdf5"
+
+    def get_activations_path(self):
+        return self.dir()+"/activations.hdf5"
+
+    def get_model_def(self):
+        with open(self.get_model_def_path(), 'r') as myfile:
+            data=myfile.read()
+        return data
 
     @override
     def job_type(self):
