@@ -19,7 +19,7 @@ class CaffeUploadTask(UploadPretrainedModelTask):
         return 'Upload Pretrained Caffe Model'
 
     @override
-    def get_model_def_path(self):
+    def get_model_def_path(self,as_json=False):
         """
         Get path to model definition
         """

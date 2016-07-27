@@ -76,7 +76,7 @@ class UploadPretrainedModelTask(Task):
         args  = ["cp", input, self.job_dir+"/"+output]
         p = subprocess.Popen(args,env=env)
 
-    def get_model_def_path(self):
+    def get_model_def_path(self,as_json=False):
         """
         Get path to model definition
         """

@@ -44,8 +44,8 @@ class PretrainedModelJob(Job):
     def get_weights_path(self):
         return self.tasks[0].get_weights_path()
 
-    def get_model_def_path(self):
-        return self.tasks[0].get_model_def_path()
+    def get_model_def_path(self,as_json=False):
+        return self.tasks[0].get_model_def_path(as_json)
 
     def get_deploy_path(self):
         return self.tasks[0].get_deploy_path()
@@ -56,8 +56,8 @@ class PretrainedModelJob(Job):
     def get_activations_path(self):
         return self.dir()+"/activations.hdf5"
 
-    def get_model_def(self):
-        with open(self.get_model_def_path(), 'r') as myfile:
+    def get_model_def(self,as_json=False):
+        with open(self.get_model_def_path(as_json), 'r') as myfile:
             data=myfile.read()
         return data
 

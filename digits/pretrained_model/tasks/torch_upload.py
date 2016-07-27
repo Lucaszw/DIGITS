@@ -20,11 +20,14 @@ class TorchUploadTask(UploadPretrainedModelTask):
         return 'Upload Pretrained Torch Model'
 
     @override
-    def get_model_def_path(self):
+    def get_model_def_path(self,as_json=False):
         """
         Get path to model definition
         """
-        return self.job_dir+"/model_def.json"
+        if as_json == True:
+            return self.job_dir+"/model_def.json"
+        else:
+            return self.get_deploy_path();
 
     @override
     def get_weights_path(self):
@@ -51,7 +54,7 @@ class TorchUploadTask(UploadPretrainedModelTask):
         args = [torch_bin,
                 os.path.join(os.path.dirname(os.path.dirname(digits.__file__)),'tools','torch','toJSON.lua'),
                 '--network=%s' % os.path.split(self.get_deploy_path())[1].split(".")[0],
-                '--output=%s' % self.get_model_def_path(),
+                '--output=%s' % self.get_model_def_path(True),
                 ]
         p = subprocess.Popen(args,cwd=self.job_dir,env=env)
 
