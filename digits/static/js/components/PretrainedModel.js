@@ -135,7 +135,6 @@ var PretrainedModel = function(params){
       .attr("class","file-upload btn btn-sm btn-"+props.state)
       .style({position: "relative", display: "inline-block !important"});
 
-
     archive.button.append("span").attr("class", props.class).text(props.text);
 
     archive.input = archive.button.append("input").attr({

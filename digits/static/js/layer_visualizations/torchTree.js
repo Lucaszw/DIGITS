@@ -55,11 +55,8 @@ function loadTorchTree(selector){
       // Emit and event which includes the target svg object, and layer info
       var event = document.createEvent('Event');
       event.initEvent('LayerClicked', true, true);
-      event.layer  = {name: g.node(d).chain};
+      event.layer  = {name: g.node(d).chain, label: g.node(d).label};
       event.svgTarget = d3.event.target;
       document.dispatchEvent(event);
-
   });
-
-  // .event(svg);
 }

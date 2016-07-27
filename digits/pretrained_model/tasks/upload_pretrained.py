@@ -1,16 +1,11 @@
 # Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
 from __future__ import absolute_import
+import subprocess
+
 import digits
 from digits.task import Task
 from digits.utils import subclass, override
-from digits.status import Status
-from digits import frameworks
-from digits.framework_helpers import caffe_helpers
 
-# TODO: Move to torch framework helpers
-from digits.config import config_value
-
-import subprocess
 
 @subclass
 class UploadPretrainedModelTask(Task):
@@ -18,7 +13,6 @@ class UploadPretrainedModelTask(Task):
     A task for uploading pretrained models
     """
     def __init__(self, **kwargs):
-
         """
         Arguments:
         weights_path -- path to model weights (**.caffemodel or ***.t7)
@@ -91,5 +85,17 @@ class UploadPretrainedModelTask(Task):
     def get_weights_path(self):
         """
         Get path to model weights
+        """
+        raise NotImplementedError('Please implement me')
+
+    def get_deploy_path(self):
+        """
+        Get path to file containing model def for deploy/visualization
+        """
+        raise NotImplementedError('Please implement me')
+
+    def write_deploy(self):
+        """
+        Write model definition for deploy/visualization
         """
         raise NotImplementedError('Please implement me')

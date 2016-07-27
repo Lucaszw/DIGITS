@@ -8,6 +8,44 @@ from digits.config import load_config, config_value
 load_config()
 from digits import utils, log
 
+def save_weights(network_path,weights_path, gpu=None, logger=None):
+
+    if config_value('torch_root') == '<PATHS>':
+        torch_bin = 'th'
+    else:
+        torch_bin = os.path.join(config_value('torch_root'), 'bin', 'th')
+
+    args = [torch_bin,
+            os.path.join(os.path.dirname(os.path.dirname(digits.__file__)),'tools','torch','wrapper.lua'),
+            'getWeights.lua',
+            '--network=%s' % os.path.basename(network_path).split(".")[0],
+            '--networkDirectory=%s' % os.path.split(network_path)[0],
+            '--snapshot=%s' % os.path.split(weights_path)[1],
+            '--save=%s' % "."
+            ]
+
+    # Convert them all to strings
+    args = [str(x) for x in args]
+
+    env = os.environ.copy()
+
+    if gpu is not None:
+        args.append('--type=cuda')
+        # make only the selected GPU visible
+        env['CUDA_VISIBLE_DEVICES'] = "%d" % gpu
+    else:
+        args.append('--type=float')
+
+    # stdout=subprocess.PIPE,
+    # stderr=subprocess.STDOUT,
+
+    p = subprocess.Popen(args,
+            cwd=os.path.split(network_path)[0],
+            close_fds=True,
+            env=env
+            )
+    p.wait()
+
 def save_activations_and_weights(image_path,network_path,weights_path,image_info=None,labels_dir=None,gpu=None, logger=None):
     if image_info is None:
         image_info = {"height": 256, "width": 256, "channels": 3, "resize_mode": "squash"}
@@ -64,12 +102,11 @@ def save_activations_and_weights(image_path,network_path,weights_path,image_info
     # TODO: Get mean
     args.append('--subtractMean=none')
 
-    # stdout=subprocess.PIPE,
-    # stderr=subprocess.STDOUT,
-
     p = subprocess.Popen(args,
             cwd=os.path.split(network_path)[0],
             close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             env=env
             )
     p.wait()

@@ -21,11 +21,9 @@ import PIL.Image
 from urlparse import urlparse
 
 from digits.config import config_value
-from digits.pretrained_model import PretrainedModelJob
-import digits.webapp
 import digits.dataset.images.classification.test_views
-import digits.model.images.classification.test_views
 import digits.test_views
+import digits.webapp
 
 # Must import after importing digit.config
 import caffe_pb2
@@ -62,18 +60,17 @@ class BaseTestUpload(digits.model.images.classification.test_views.BaseViewsTest
                 'model_def_file': model_def_file,
                 'labels_file': labels_file,
                 'framework': info['framework'],
-                'job_name': info['name'],
                 'image_type': info["image dimensions"][2],
                 'resize_mode': info["image resize mode"],
                 'width': info["image dimensions"][0],
-                'height': info["image dimensions"][1]
+                'height': info["image dimensions"][1],
+                'job_name': 'test_create_pretrained_model_job'
                 }
             )
         s = BeautifulSoup(rv.data, 'html.parser')
         body = s.select('body')
 
         assert rv.status_code == 302, 'POST failed with %s\n\n%s' % (rv.status_code, body)
-
 
 class TestCaffeManualUpload(BaseTestUpload):
     FRAMEWORK = 'caffe'

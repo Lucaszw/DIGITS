@@ -2,17 +2,20 @@ import flask
 import tempfile
 import tarfile
 import zipfile
-import json
 
 import os
 import shutil
 import h5py
+import json
 import numpy as np
 
 from digits import dataset, extensions, model, utils
 from digits.webapp import app, scheduler
 from digits.pretrained_model import PretrainedModelJob
+
 from digits.inference import ActivationsJob
+from digits.inference import WeightsJob
+
 from digits.utils.routing import request_wants_json, job_from_request
 from digits.views import get_job_list
 
@@ -77,6 +80,27 @@ def get_data_blob(id, activations):
 def format_job_name(job):
     return {"name": job.name(), "id": job.id()}
 
+@blueprint.route('/get_weights.json', methods=['GET'])
+def get_weights():
+    """ Return the weights for a given layer """
+    job = job_from_request()
+    args = flask.request.args
+    layer_name = args["layer_name"]
+    range_min  = int(args["range_min"])
+    range_max  = int(args["range_max"])
+    data   = []
+    stats  = {}
+    num_units = 0
+
+    if os.path.isfile(job.get_filters_path()):
+        f = h5py.File(job.get_filters_path())
+        if layer_name in f:
+            num_units = len(f[layer_name])
+            stats = json.loads(f[layer_name].attrs["stats"])
+            data = f[layer_name][:][range_min:range_max].tolist()
+
+    return flask.jsonify({"data": data, "length": num_units, "stats": stats })
+
 @blueprint.route('/get_inference.json', methods=['GET'])
 def get_inference():
     """ Return the weights and activations for a given layer """
@@ -132,11 +156,10 @@ def get_outputs():
     return flask.jsonify({"model_def": job.get_model_def(), "images": data, "framework": job.framework})
 
 @utils.auth.requires_login
-@blueprint.route('/layer_visualizations', methods=['GET'])
-def layer_visualizations():
-    jobs = [format_job_name(x) for x in get_job_list(PretrainedModelJob,False)]
-    return flask.render_template("pretrained_models/layer_visualizations.html",
-            jobs=jobs)
+@blueprint.route('/layer_visualizations/<job_id>', methods=['GET'])
+def layer_visualizations(job_id):
+    job  = format_job_name(scheduler.get_job(job_id))
+    return flask.render_template("pretrained_models/layer_visualizations.html",job=job)
 
 @utils.auth.requires_login
 @blueprint.route('/upload_archive', methods=['POST'])
@@ -249,4 +272,13 @@ def new():
 
     scheduler.add_job(job)
 
-    return flask.redirect(flask.url_for('digits.views.home', tab=3)), 302
+    job.wait_completion()
+
+    weights_job = WeightsJob(
+        job,
+        name     = flask.request.form['job_name'],
+        username = utils.auth.get_username()
+    )
+    scheduler.add_job(weights_job)
+
+    return flask.redirect(flask.url_for('digits.views.home')), 302

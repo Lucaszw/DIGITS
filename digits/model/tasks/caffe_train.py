@@ -258,7 +258,6 @@ class CaffeTrainTask(TrainTask):
         Save solver, train_val and deploy files to disk
         """
         # Save the original network to file:
-
         with open(self.path(self.model_file), 'w') as outfile:
             text_format.PrintMessage(self.network, outfile)
 

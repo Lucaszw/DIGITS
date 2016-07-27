@@ -15,6 +15,8 @@ class PretrainedModelJob(Job):
     def __init__(self, weights_path, model_def_path, labels_path=None,framework="caffe",
                 image_type="3",resize_mode="Squash", width=224, height=224, **kwargs):
 
+        super(PretrainedModelJob, self).__init__(persistent = False, **kwargs)
+
         self.has_labels = labels_path is not None
         self.framework  = framework
         self.image_info = {
@@ -42,14 +44,17 @@ class PretrainedModelJob(Job):
     def get_weights_path(self):
         return self.tasks[0].get_weights_path()
 
-    def get_deploy_path(self):
-        if self.framework == "caffe":
-            return self.dir()+"/deploy.prototxt"
-        else:
-            return self.dir()+"/original.lua"
-
     def get_model_def_path(self):
         return self.tasks[0].get_model_def_path()
+
+    def get_deploy_path(self):
+        return self.tasks[0].get_deploy_path()
+
+    def get_filters_path(self):
+        return self.dir()+"/filters.hdf5"
+
+    def get_activations_path(self):
+        return self.dir()+"/activations.hdf5"
 
     def get_model_def(self):
         with open(self.get_model_def_path(), 'r') as myfile:
@@ -63,7 +68,6 @@ class PretrainedModelJob(Job):
     @override
     def __getstate__(self):
         fields_to_save = ['_id', '_name', 'username', 'tasks', 'status_history', 'has_labels', 'framework', 'image_info']
-
         full_state = super(PretrainedModelJob, self).__getstate__()
         state_to_save = {}
         for field in fields_to_save:

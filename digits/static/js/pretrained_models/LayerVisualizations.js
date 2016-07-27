@@ -1,4 +1,7 @@
-var colormap = chroma.scale(['#541E8A','#3F84FE','#87BCFF','#4BD29F','#9AFFA2','#F3AC5A','#FF0000']).colors(255);
+var VIRDIS = ["#440154","#440256","#450457","#450559","#46075a","#46085c","#460a5d","#460b5e","#470d60","#470e61","#471063","#471164","#471365","#481467","#481668","#481769","#48186a","#481a6c","#481b6d","#481c6e","#481d6f","#481f70","#482071","#482173","#482374","#482475","#482576","#482677","#482878","#482979","#472a7a","#472c7a","#472d7b","#472e7c","#472f7d","#46307e","#46327e","#46337f","#463480","#453581","#453781","#453882","#443983","#443a83","#443b84","#433d84","#433e85","#423f85","#424086","#424186","#414287","#414487","#404588","#404688","#3f4788","#3f4889","#3e4989","#3e4a89","#3e4c8a","#3d4d8a","#3d4e8a","#3c4f8a","#3c508b","#3b518b","#3b528b","#3a538b","#3a548c","#39558c","#39568c","#38588c","#38598c","#375a8c","#375b8d","#365c8d","#365d8d","#355e8d","#355f8d","#34608d","#34618d","#33628d","#33638d","#32648e","#32658e","#31668e","#31678e","#31688e","#30698e","#306a8e","#2f6b8e","#2f6c8e","#2e6d8e","#2e6e8e","#2e6f8e","#2d708e","#2d718e","#2c718e","#2c728e","#2c738e","#2b748e","#2b758e","#2a768e","#2a778e","#2a788e","#29798e","#297a8e","#297b8e","#287c8e","#287d8e","#277e8e","#277f8e","#27808e","#26818e","#26828e","#26828e","#25838e","#25848e","#25858e","#24868e","#24878e","#23888e","#23898e","#238a8d","#228b8d","#228c8d","#228d8d","#218e8d","#218f8d","#21908d","#21918c","#20928c","#20928c","#20938c","#1f948c","#1f958b","#1f968b","#1f978b","#1f988b","#1f998a","#1f9a8a","#1e9b8a","#1e9c89","#1e9d89","#1f9e89","#1f9f88","#1fa088","#1fa188","#1fa187","#1fa287","#20a386","#20a486","#21a585","#21a685","#22a785","#22a884","#23a983","#24aa83","#25ab82","#25ac82","#26ad81","#27ad81","#28ae80","#29af7f","#2ab07f","#2cb17e","#2db27d","#2eb37c","#2fb47c","#31b57b","#32b67a","#34b679","#35b779","#37b878","#38b977","#3aba76","#3bbb75","#3dbc74","#3fbc73","#40bd72","#42be71","#44bf70","#46c06f","#48c16e","#4ac16d","#4cc26c","#4ec36b","#50c46a","#52c569","#54c568","#56c667","#58c765","#5ac864","#5cc863","#5ec962","#60ca60","#63cb5f","#65cb5e","#67cc5c","#69cd5b","#6ccd5a","#6ece58","#70cf57","#73d056","#75d054","#77d153","#7ad151","#7cd250","#7fd34e","#81d34d","#84d44b","#86d549","#89d548","#8bd646","#8ed645","#90d743","#93d741","#95d840","#98d83e","#9bd93c","#9dd93b","#a0da39","#a2da37","#a5db36","#a8db34","#aadc32","#addc30","#b0dd2f","#b2dd2d","#b5de2b","#b8de29","#bade28","#bddf26","#c0df25","#c2df23","#c5e021","#c8e020","#cae11f","#cde11d","#d0e11c","#d2e21b","#d5e21a","#d8e219","#dae319","#dde318","#dfe318","#e2e418","#e5e419","#e7e419","#eae51a","#ece51b","#efe51c","#f1e51d","#f4e61e","#f6e620","#f8e621","#fbe723","#fde725"];
+var JET    = chroma.scale(["#000080", "blue", "cyan", "green", "yellow", "red", "#800000"]).colors(256);
+
+var colormap = JET;
 
 var LayerVisualizations = function(selector,props){
   var self = this;
@@ -38,13 +41,12 @@ var LayerVisualizations = function(selector,props){
 
   self.dispatchInference = function() {
     if (!_.isNull(self.layer)){
-      self.actions.getInference(self.layer.name);
+      self.actions.getWeights(self.layer.name);
     }
   };
 
   self.update = function(){
-
-    var h = w = 75;
+    var h = w = 35;
     var grid_dim = self.outputs[0][0].length;
     var pixel_h = pixel_w = h/grid_dim;
 
@@ -64,19 +66,22 @@ var LayerVisualizations = function(selector,props){
     items.exit().remove();
 
     // Add hover effect
-    items.on("mouseover", function(){
+    items.on("mouseover", function(data,i){
       d3.select(this).classed("canvas-hover", true);
+      $(this).tooltip({title: self.range.min + i + "", placement: "bottom"});
+      $(this).tooltip("show");
     });
     items.on("mouseout", function(){
       d3.select(this).classed("canvas-hover", false);
     })
   };
 
-
   self.drawOutputs = function(json){
+    self.layer.stats = json.stats;
     self.panel.render();
     self.outputs.length = 0;
     self.outputs.push.apply(self.outputs, _.isUndefined(json.data) ? [] : json.data);
+    if (self.outputs.length > 0 ) self.panel.body.html('');
     self.update();
     self.panel.drawNav(self.range, json.length);
   };
@@ -98,8 +103,8 @@ var LayerVisualizations = function(selector,props){
             // If grayscale , convert to rgb using declared color map
             // use tanh scale, instead of linear scale to match pixel color
             // for better visual appeal:
-            var c = 255*(Math.tanh(2*pixel));
-            // var c = 255*pixel;
+            // var c = 255*(Math.tanh(2*pixel));
+            var c = 256*pixel;
             rgb = window.colormap[Math.floor(c)];
           }
 
@@ -115,7 +120,7 @@ var LayerVisualizations = function(selector,props){
   // Add listener for when a layer clicked:
   document.addEventListener("LayerClicked", function(e){
     self.layer = e.layer;
-    self.range = {min: 0 , max: 198};
+    self.range = {min: 0 , max: 500};
     self.dispatchInference();
   });
 
@@ -124,6 +129,24 @@ var LayerVisualizations = function(selector,props){
 LayerVisualizations.Actions = function(props){
   var self   = this;
   var parent = !_.isUndefined(props.parent) ? props.parent : props;
+
+  self.getWeights = function(layerName){
+
+    params = $.param({
+      "job_id": parent.job_id,
+      "layer_name":layerName,
+      "range_min": parent.range.min,
+      "range_max": parent.range.max
+    });
+
+    parent.overlay.render();
+
+    var outputs_url  = "/pretrained_models/get_weights.json?"+params;
+    d3.json(outputs_url, function(error, json) {
+      // console.log(json);
+      parent.drawOutputs(json);
+    });
+  };
 
   self.getInference = function(layerName){
 
@@ -238,10 +261,15 @@ LayerVisualizations.Panel = function(selector,props){
       .append("div").attr("class","row").style("padding","0px 10px");
 
     self.headingCenter = heading.append("div").attr("class", "text-center col-xs-offset-1 col-xs-10");
+    self.headingCenter.append("div").html(parent.layer.label + " (" + parent.layer.stats.shape + ")");
     self.headingRight  = heading.append("div").attr("class", "col-xs-1 text-right");
 
     var panelBody = panel.append("div").attr("class", "panel-content");
     self.body = panelBody.append("div").attr("class", "outputs");
+    self.body.append("div")
+      .attr("class", "alert alert-warning")
+      .style("margin","15px")
+      .html("This layer contains no weights");
     self.nav = panelBody.append("div").attr("class", "panel-nav");
 
     self.drawCloseButton();
@@ -282,128 +310,10 @@ LayerVisualizations.Overlay = function(selector,props){
 
 LayerVisualizations.Carousel = function(selector,props){
   var self   = this;
-  var parent = !_.isUndefined(props.parent) ? props.parent : props;
 
-  self.container = d3.select(selector);
-
-  self.images     = new Array();
-  self.inner      = null;
-  self.fileSelect = null;
-
-  self.dispatchUpload = function(e){
-    var file = self.fileSelect.node().files[0];
-    parent.actions.uploadImage(file);
-  };
-  self.dispatchChangeImage = function(e){
-    parent.image_id = e.relatedTarget.dataset.imageId;
-    parent.dispatchInference();
-  };
-
-  self.update = function(){
-    var bbox = self.inner.node().getBoundingClientRect();
-    var size = {height: bbox.height, width: bbox.width};
-
-    var items = self.inner.selectAll("canvas").data(self.images);
-    var n = self.images.length-1;
-    items.attr("class", "item").enter()
-      .append("canvas")
-        .attr("class",function(d,i){return "item "+(i == n ? "active" : "")})
-        .attr(size)
-        .attr("data-image-id",function(d){return d.id})
-        .style({height: size.height+"px", width: size.width+"px"})
-        .each(function(image,i){
-           var ctx = this.getContext("2d");
-           ctx.clearRect(0, 0, size.width,size.height);
-           var grid_dim = image.data[0].length;
-           parent.drawUnit(image.data,ctx,size.width/grid_dim,size.height/grid_dim);
-        });
-
-    items.exit().remove();
-
-    parent.image_id = self.images[n].id;
-  };
-
-  self.load = function(image){
-    self.images.push(image);
-    parent.image_id = image.id;
-    self.update();
-  };
-
-  self.drawButton = function(){
-    var button = self.container.append("div")
-      .attr("class","file-upload btn btn-primary")
-      .style({position: "relative", display: "block"});
-
-    button.append("span").text("Upload Image");
-
-    self.fileSelect = button.append("input").attr({
-      type: "file",
-      class: "upload",
-      multiple: ""
-    });
-
-    self.fileSelect.node().onchange = self.dispatchUpload;
-
-  };
-
-  self.drawCarousel = function(){
-    var outer = self.container.append("div")
-      .attr("id", "imageCarousel")
-      .attr("class","panel panel-default  carousel slide")
-      .style(self.styles.outer);
-
-    self.inner = outer.append("div").attr("class","carousel-inner").style("height","100%");
-
-    outer.append("a").attr(self.attr.left)
-      .append("span").attr("class","glyphicon glyphicon-chevron-left");
-
-    outer.append("a").attr(self.attr.right)
-      .append("span").attr("class","glyphicon glyphicon-chevron-right");
-
-    $("#imageCarousel").carousel({ interval: false });
-
-    $('#imageCarousel').bind('slide.bs.carousel', self.dispatchChangeImage);
-  };
-
-  self.remove = function(){
-    self.container.html('');
-  }
-
-  self.render = function(images){
-    self.container.attr("class","text-center");
-    self.container.append("b").text("Saved Images:");
-    self.drawCarousel();
-    self.drawButton();
-
-    self.images.length = 0;
-    self.images.push.apply(self.images, _.isUndefined(images) ? [] : images);
-    self.update();
-
-  };
-
-  self.attr = {
-    left: {
-      "class": "left carousel-control",
-      "href": "#imageCarousel",
-      "role": "button",
-      "data-slide": "prev"
-    },
-    right: {
-      "class": "right carousel-control",
-      "href": "#imageCarousel",
-      "role": "button",
-      "data-slide": "next"
-    }
-  };
-
-  self.styles = {
-    outer: {
-      margin: "0 auto 10px auto",
-      width: "100%",
-      height: "140px",
-      overflow: "hidden"
-    }
-  };
+  self.load   = _.noop;
+  self.remove = _.noop;
+  self.render = _.noop;
 
 };
 
@@ -446,7 +356,7 @@ LayerVisualizations.Jobs = function(selector,props){
       loadTorchTree(parent.tree_container.node());
     }
     parent.carousel.render(json.images);
-  }
+  };
 
   self.render = function(d){
     self.container.style(self.styles.jobs);

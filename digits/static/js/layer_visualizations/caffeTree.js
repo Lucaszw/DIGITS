@@ -174,7 +174,7 @@ function loadTree(selector,height){
     // Emit and event which includes the target svg object, and layer info
     var event = document.createEvent('Event');
     event.initEvent('LayerClicked', true, true);
-    event.layer  = layer;
+    event.layer  = _.extend(layer, {label: layer.name });
     event.svgTarget = d3.event.target;
     document.dispatchEvent(event);
   }
@@ -186,12 +186,10 @@ function loadTree(selector,height){
       update(d);
   }
 
-
   var defs = d3.select("svg").append('svg:defs');
 
   var markerAttributes = {"refX":"8","refY":"3","markerWidth":"10","markerHeight":"10","fill":"black"};
   var arrowPath = "M0,0 L0,6 L9,3 z";
-
 
   defs.append('svg:linearGradient')
     .attr('gradientUnits', 'userSpaceOnUse')
@@ -450,6 +448,5 @@ function loadTree(selector,height){
   // Layout the tree initially and center on the root node.
   update(root);
   centerNode(root);
-
 
 }
