@@ -1,7 +1,7 @@
 <script type="text/javascript" src="{{ url_for('static', filename='js/components/PretrainedModel.js') }}"></script>
 
 
-{% set size = 550 %}
+{% set size = 600 %}
 {% set url  = "/pretrained_models/new" %}
 
 <style>
@@ -32,27 +32,16 @@
   position: fixed;
   top: 0px;
   left: 0px;
-  z-index: 1000;
+  z-index: 1030;
 }
 .modalLabel: {font-size: 13px;}
 
 </style>
 
 <div class="modalOuter closeModal" style="display: none;">
-  <div class="panel panel-default modalBody">
-    <!-- Navigation -->
-    <div style="width: 100%; text-align:right">
-      <a class="btn btn-danger btn-xs closeButton" onclick="closeModal()">
-        <span class="glyphicon glyphicon-remove"></span>
-      </a>
-    </div>
-
     <!-- Content -->
-    <form style="top: -20px; position: relative; padding: 10px {{size/10}}px" action="{{url}}" method="post" enctype="multipart/form-data">
-      <h4 style="modalHeader">Upload Pretrained Model</h4>
-      <div id="pretrainedModelContent"></div>
+    <form class="panel panel-default modalBody" id="pretrainedModelContent" action="{{url}}" method="post" enctype="multipart/form-data">
     </form>
-  </div>
 </div>
 
 <script>
@@ -63,7 +52,7 @@ function closeModal(){
 
 $(document).ready(function(){
 
-  var pretrainedModel = new PretrainedModel({selector:"#pretrainedModelContent"});
+  window.pretrainedModel = new PretrainedModel({selector:"#pretrainedModelContent", size: {{size}} });
 
   $("#uploadPretrainedModel").on("click",function(e){
     e.preventDefault();

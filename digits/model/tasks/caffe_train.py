@@ -1069,7 +1069,7 @@ class CaffeTrainTask(TrainTask):
             stats.update({
                 "caffe flavor": self.caffe_flavor,
                 "caffe version": self.caffe_version,
-                "network file": self.model_file,
+                "model file": self.model_file,
                 "digits version": self.digits_version
             })
 

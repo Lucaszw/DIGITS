@@ -14,7 +14,6 @@ class UploadPretrainedModelTask(Task):
     """
 
     def __init__(self, **kwargs):
-
         """
         Arguments:
         weights_path -- path to model weights (**.caffemodel or ***.t7)
@@ -74,11 +73,9 @@ class UploadPretrainedModelTask(Task):
                 labels = f.readlines()
         return labels
 
-
     def move_file(self,input, output,env):
         args  = ["cp", input, self.job_dir+"/"+output]
         p = subprocess.Popen(args,env=env)
-
 
     def get_model_def_path(self):
         """

@@ -113,7 +113,8 @@
                 </tbody>
                 <tbody ng-if="jobs.length == 0">
                     <tr>
-                        <td colspan="{[fields.length]}">
+                        {[ colspan = (storage.pretrained_model_fields | filter:show(true)).length + (storage.model_output_fields | filter:show(true)).length;'' ]}
+                        <td colspan="{[colspan]}">
                             <h5>
                                 No Models
                             </h5>

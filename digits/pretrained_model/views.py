@@ -1,9 +1,14 @@
 import flask
 import tempfile
+import tarfile
+import zipfile
+
 import os
+import shutil
 import h5py
 import json
 import numpy as np
+
 from digits import dataset, extensions, model, utils
 from digits.webapp import app, scheduler
 from digits.pretrained_model import PretrainedModelJob
@@ -155,6 +160,72 @@ def get_outputs():
 def layer_visualizations(job_id):
     job  = format_job_name(scheduler.get_job(job_id))
     return flask.render_template("pretrained_models/layer_visualizations.html",job=job)
+
+@utils.auth.requires_login
+@blueprint.route('/upload_archive', methods=['POST'])
+def upload_archive():
+    """
+    Upload archive
+    """
+    files = flask.request.files
+    archive_file = get_tempfile(files["archive"],".archive");
+
+    if tarfile.is_tarfile(archive_file):
+        archive = tarfile.open(archive_file,'r')
+        names = archive.getnames()
+    elif zipfile.is_zipfile(archive_file):
+        archive = zipfile.ZipFile(archive_file, 'r')
+        names = archive.namelist()
+    else:
+        return flask.jsonify({"status": "error"}), 500
+
+    if "info.json" in names:
+
+        # Create a temp directory to storce archive
+        tempdir = tempfile.mkdtemp()
+        archive.extractall(path=tempdir)
+
+        with open(os.path.join(tempdir, "info.json")) as data_file:
+            info = json.load(data_file)
+
+        # Get path to files needed to be uploaded in directory
+        weights_file = os.path.join(tempdir, info["snapshot file"])
+        model_file   = os.path.join(tempdir, info["model file"])
+        labels_file  = os.path.join(tempdir, info["labels file"])
+
+        # Upload the Model:
+        job = PretrainedModelJob(
+            weights_file,
+            model_file ,
+            labels_file,
+            info["framework"],
+            info["image dimensions"][2],
+            info["image resize mode"],
+            info["image dimensions"][0],
+            info["image dimensions"][1],
+            username = utils.auth.get_username(),
+            name = info["name"]
+        )
+
+        scheduler.add_job(job)
+        job.wait_completion()
+
+        # Delete temp directory
+        shutil.rmtree(tempdir, ignore_errors=True)
+
+        # Get Weights:
+        weights_job = WeightsJob(
+            job,
+            name     = info['name'],
+            username = utils.auth.get_username()
+        )
+
+        scheduler.add_job(weights_job)
+
+        return flask.jsonify({"status": "success"}), 200
+    else:
+        return flask.jsonify({"status": "error"}), 500
+
 
 @utils.auth.requires_login
 @blueprint.route('/new', methods=['POST'])
