@@ -56,6 +56,11 @@ class PretrainedModelJob(Job):
     def get_activations_path(self):
         return self.dir()+"/activations.hdf5"
 
+    def get_deploy(self,as_json=False):
+        with open(self.get_deploy_path(), 'r') as myfile:
+            data=myfile.read()
+        return data
+
     def get_model_def(self,as_json=False):
         with open(self.get_model_def_path(as_json), 'r') as myfile:
             data=myfile.read()
