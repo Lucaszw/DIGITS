@@ -250,12 +250,13 @@ def to_pretrained(job_id):
     weights_job = WeightsJob(
         job,
         name     = info['name'],
-        username = auth.get_username()
+        username = username
     )
 
     scheduler.add_job(weights_job)
 
     return flask.redirect(flask.url_for('digits.views.home', tab=3)), 302
+
 
 @blueprint.route('/<job_id>/download',
         methods=['GET', 'POST'],

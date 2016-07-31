@@ -21,6 +21,7 @@ from .job import Job
 from .log import logger
 from .model import ModelJob
 from .pretrained_model import PretrainedModelJob
+from .inference import WeightsJob
 from .status import Status
 from digits.utils import errors
 
@@ -145,7 +146,7 @@ class Scheduler:
 
         # add DatasetJobs or PretrainedModelJobs
         for job in loaded_jobs:
-            if isinstance(job, DatasetJob) or isinstance(job,PretrainedModelJob):
+            if isinstance(job, DatasetJob) or isinstance(job,PretrainedModelJob) or isinstance(job,WeightsJob):
                 self.jobs[job.id()] = job
 
         # add ModelJobs

@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import digits.config
 digits.config.load_config()
+
 from digits import utils, log
 from digits.inference.errors import InferenceError
 

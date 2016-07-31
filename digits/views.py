@@ -210,10 +210,11 @@ def completed_jobs():
     running_models    = get_job_list(model.ModelJob, True)
     pretrained_models = get_job_list(pretrained_model.PretrainedModelJob,False)
     running_weights   = get_job_list(inference.WeightsJob,True)
+    running_max_activ = get_job_list(inference.GradientAscentJob,True)
 
     model_output_fields = set()
     data = {
-        'running': [json_dict(j, model_output_fields) for j in running_datasets + running_models + running_weights],
+        'running': [json_dict(j, model_output_fields) for j in running_datasets + running_models+running_weights+running_max_activ],
         'datasets': [json_dict(j, model_output_fields) for j in completed_datasets],
         'models': [json_dict(j, model_output_fields) for j in completed_models],
         'pretrained_models': [json_dict(j, model_output_fields) for j in pretrained_models],
@@ -352,6 +353,8 @@ def show_job(job_id):
     if isinstance(job, pretrained_model.PretrainedModelJob):
         return flask.redirect(flask.url_for('digits.pretrained_model.views.layer_visualizations', job_id=job_id))
     if isinstance(job, inference.WeightsJob):
+        return flask.redirect(flask.url_for('digits.pretrained_model.views.layer_visualizations', job_id=job.pretrained_model.id()))
+    if isinstance(job, inference.GradientAscentJob):
         return flask.redirect(flask.url_for('digits.pretrained_model.views.layer_visualizations', job_id=job.pretrained_model.id()))
     else:
         raise werkzeug.exceptions.BadRequest('Invalid job type')

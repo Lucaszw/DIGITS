@@ -22,125 +22,165 @@ var LayerVisualizations = function(selector,props){
     self.image_id = null;
     self.layer    = null;
     self.range    = null;
+    self.active_tab = null;
     self.outputs  = [];
+    self.items    = [];
 
+    // Initialization
     self.initPanel = function(props){
+        // Responsible for Output Units of Inference Tasks
         var selector = self.tree_container.node();
         self.overlay = new LayerVisualizations.Overlay(selector,self.extend(props));
         self.panel   = new LayerVisualizations.Panel(selector,self.extend(props));
     };
 
     self.initJobs = function(selector,props){
+        // Responsible for changing, and updating current job
         self.jobs = new LayerVisualizations.Jobs(selector,self.extend(props));
         self.jobs.render();
     };
 
+    self.initTasks = function(selector,props){
+        // Responsible for Inference Tasks, and Displaying Status
+        self.tasks = new LayerVisualizations.Tasks(selector,self.extend(props));
+        self.tasks.render();
+    };
+
+
+    // Dispatchers:
     self.dispatchInference = function() {
-        if (!_.isNull(self.layer)){
-            self.actions.getWeights(self.layer.name);
-        }
+      if (_.isNull(self.layer)) return
+
+      if (_.isNull(self.active_tab) || self.active_tab == "weights")
+        self.actions.getWeights(self.layer.name);
+
+      if (self.active_tab == "max-activations")
+        self.actions.getMaxActivations(self.layer.name);
+
+    };
+
+    // Update:
+    self.updateItem = function(item,layer,unit){
+      if (self.layer.name != layer) return;
+      if (self.active_tab != "max-activations") return;
+
+      var size = 65;
+
+      var params = $.param({
+        "job_id": self.job_id,
+        "layer_name":layer,
+        "unit": unit,
+      });
+
+      var image_url = "/pretrained_models/max_activation?"+params;
+      UnitHelpers.drawUnitImage(image_url,item,size,false);
     };
 
     self.update = function(){
-        var h = w = 35;
-        var grid_dim = self.outputs[0][0].length;
-        var pixel_h = pixel_w = h/grid_dim;
 
-        var output_style = {margin: "0px",height:h+"px", width:w+"px", position: "relative"};
-        var output_attr  = {height:h, width:w, class: "panel panel-default"};
+      var items = self.items =
+        self.panel.body.selectAll("canvas").data(self.outputs);
 
-        var items = self.panel.body.selectAll("canvas").data(self.outputs);
-        items.attr("class", "item").enter()
-          .append("canvas")
-            .attr(output_attr).style(output_style)
-            .each(function(data,i){
-                var ctx = this.getContext("2d");
-                ctx.clearRect(0, 0, w, h);
-                self.drawUnit(data,ctx,pixel_w,pixel_h);
-            });
+      items.attr("class", "item panel panel-default").enter()
+        .append("canvas")
+          .attr("class", "panel panel-default")
+          .attr(UnitHelpers.defaultAttributes())
+          .attr("data-layer", self.layer.name)
+          .style(UnitHelpers.defaultStyles())
+          .on("click", self.tasks.dispatchUnitClick)
+          .each(function(data,i){
+            if (_.isBoolean(data)){
+              var unit = self.range.min + i;
+              self.updateItem(this,self.layer.name,unit);
+            }else {
+              var hw = self.active_tab == "max-activations" ? 65 : 35;
+              UnitHelpers.drawUnit(data,this,hw,hw);
+            }
+          });
 
-        items.exit().remove();
+      items.exit().remove();
 
-        // Add hover effect
-        items.on("mouseover", function(data,i){
-            d3.select(this).classed("canvas-hover", true);
-            $(this).tooltip({title: self.range.min + i + "", placement: "bottom"});
-            $(this).tooltip("show");
-        });
-        items.on("mouseout", function(){
-            d3.select(this).classed("canvas-hover", false);
-        })
+      // Add hover effect
+      items.on("mouseover", function(data,i){
+        d3.select(this)
+          .classed("canvas-hover", true)
+          .style(UnitHelpers.mouseOverStyles(this.height,this.width));
+        $(this).tooltip({title: self.range.min + i + "", placement: "bottom"});
+        $(this).tooltip("show");
+      });
+
+      items.on("mouseout", function(){
+        d3.select(this)
+          .classed("canvas-hover", false)
+          .style(UnitHelpers.mouseExitStyles(this.height,this.width));
+      });
+
     };
 
-    self.drawOutputs = function(json){
-        var json = !_.isUndefined(json) ? json : {stats: "Error", msg: "Couldn't retrieve outputs"}
+    // Draw:
+    self.updateTab = function(layerName,json,tabName){
 
-        var msg    = _.noop();
-        var status = _.noop();
-
-        // If error, display message in panel instead of outputs:
-        if (json.stats == "Error"){
-            status = "danger";
-            msg = json.msg;
-        }
-
-        // Update layer and render panel:
+        self.layer = {name: layerName};
         self.layer.stats = json.stats;
-        self.panel.render(msg,status);
-
-        // Push new outputs:
+        self.active_tab = tabName;
+        self.panel.render();
         self.outputs.length = 0;
         self.outputs.push.apply(self.outputs, _.isUndefined(json.data) ? [] : json.data);
-
-        // Update:
         if (self.outputs.length > 0 ) self.panel.body.html('');
         self.update();
+        self.tasks.render();
         self.panel.drawNav(self.range, json.length);
     };
 
-    self.drawUnit = function(output_data,ctx, pixel_w,pixel_h){
-        _.each(output_data,function(row,iy){
-            // Iterate through each row:
-            _.each(row, function(pixel, ix){
-                // Iterate through each column:
-
-                var x   = ix*pixel_w;
-                var y   = iy*pixel_h;
-                var rgb = "";
-
-                // if rgb array, set color to match values * 255
-                if (pixel.length == 3){
-                    rgb = "rgb("+_.map(pixel,function(n){return Math.floor(n*255)}).join()+")";
-                }else {
-                    // If grayscale , convert to rgb using declared color map
-                    // use tanh scale, instead of linear scale to match pixel color
-                    // for better visual appeal:
-                    // var c = 255*(Math.tanh(2*pixel));
-                    var c = 256*pixel;
-                    rgb = window.colormap[Math.floor(c)];
-                }
-
-                // draw pixel:
-                ctx.fillStyle = rgb;
-                ctx.fillRect(x,y,pixel_w,pixel_h);
-                ctx.fillRect(x,y,pixel_w,pixel_h);
-
-            });
-          });
+    self.drawMaxActivations = function(layerName, json){
+        self.updateTab(layerName,json,"max-activations");
     };
 
-    // Add listener for when a layer clicked:
-    document.addEventListener("LayerClicked", function(e){
+    self.drawWeights = function(layerName,json){
+        self.updateTab(layerName,json,"weights");
+    };
+
+    self.initRange = function(){
+        self.range = {min: 0 , max: 2000};
+    };
+
+    // Events:
+    self.layerClicked = function(e){
+        self.initRange();
         self.layer = e.layer;
-        if (!_.include(self.jobs.layers_with_outputs,self.layer.name)){
-            e.svgTarget.style.cursor = "not-allowed";
-            return;
-        }
+      if (!_.include(self.jobs.layers_with_outputs,self.layer.name)){
+          e.svgTarget.style.cursor = "not-allowed";
+          return;
+      }
         self.range = {min: 0 , max: 500};
         self.dispatchInference();
-    });
-  };
+        self.tasks.render(e.layer.name);
+    };
 
+    self.maxActivationsFailed = function(msg){
+          self.tasks.signalError(msg);
+    };
+
+    self.maxActivationsUpdated = function(msg){
+      self.tasks.updateProgress(msg);
+      if (msg.data.unit > self.outputs.length){
+          self.initRange();
+          self.dispatchInference();
+          self.tasks.render(msg.data.layer);
+      }else{
+          var unit = msg.data.unit-1;
+          var index = _.isNull(self.range) ? unit : unit-self.range.min;
+          self.outputs[unit] = true;
+          self.updateItem(self.items[0][index],msg.data.layer,unit);
+      }
+    };
+
+    // Event Listeners:
+    document.addEventListener("LayerClicked", self.layerClicked);
+    socket.on('task update', self.maxActivationsUpdated);
+    socket.on('task error', self.maxActivationsFailed);
+
+};
 
 LayerVisualizations.Actions = function(props){
     var self   = this;
@@ -159,10 +199,64 @@ LayerVisualizations.Actions = function(props){
 
         var outputs_url  = "/pretrained_models/get_weights.json?"+params;
         d3.json(outputs_url, function(error, json) {
-            // console.log(json);
-            parent.drawOutputs(json);
+            parent.drawWeights(layerName,json);
         });
     };
+
+    self.stopMaxActivations = function(job_id){
+        params = $.param({
+          "job_id": parent.job_id,
+          "gradient_ascent_id": job_id
+        });
+
+        var outputs_url  = "/pretrained_models/stop_max_activations.json?"+params;
+        d3.json(outputs_url, function(error, json) {
+          parent.tasks.maxActivationsStopped();
+        });
+
+    };
+
+    self.removeMaxActivations = function(layerName){
+        params = $.param({
+          "job_id": parent.job_id,
+          "layer_name":layerName
+        });
+
+        var outputs_url  = "/pretrained_models/remove_max_activations.json?"+params;
+        d3.json(outputs_url, function(error, json) {
+            self.getMaxActivations(layerName);
+        });
+
+    };
+
+    self.postMaxActivations = function(layerName,units){
+      params = $.param({
+        "job_id": parent.job_id,
+        "layer_name":layerName,
+        "units": JSON.stringify(units)
+      });
+
+      var outputs_url  = "/pretrained_models/run_max_activations.json?"+params;
+      d3.json(outputs_url).post(function(error,json){
+          parent.tasks.job_id = json.job_id;
+      });
+    };
+
+    self.getMaxActivations = function(layerName){
+      params = $.param({
+        "job_id": parent.job_id,
+        "layer_name":layerName,
+        "range_min": parent.range.min,
+        "range_max": parent.range.max
+      });
+      parent.overlay.render();
+
+      var outputs_url  = "/pretrained_models/get_max_activations.json?"+params;
+      d3.json(outputs_url, function(error, json) {
+          parent.drawMaxActivations(layerName,json);
+      });
+    };
+
 
     self.getJob = function(job_id){
         parent.overlay.render();
@@ -184,6 +278,7 @@ LayerVisualizations.Panel = function(selector,props){
     self.outer = null;
     self.headingCenter = null;
     self.headingRight = null;
+    self.activeTab = null;
     self.body  = null;
     self.nav   = null;
 
@@ -199,7 +294,39 @@ LayerVisualizations.Panel = function(selector,props){
         parent.dispatchInference();
     };
 
+    self.drawHeading = function(panel){
+        // Draw panel header:
+
+        var heading = panel.append("div").attr("class", "panel-heading")
+          .append("div").attr("class","row").style("padding","0px 10px");
+
+        // In the center show buttons for weights, and max-activations:
+        var headingStyles = {background: "white", margin: "0px 1px"};
+        self.headingCenter = heading.append("div").attr("class", "text-center col-xs-offset-2 col-xs-8");
+
+        // self.headingCenter.append("div").html(parent.layer.label + " (" + parent.layer.stats.shape + ")");
+        self.headingCenter.append("span")
+          .attr("class", "btn btn-default btn-xs")
+          .style(headingStyles)
+          .html("Weights")
+          .attr("disabled", parent.active_tab == "weights" ? "" : null)
+          .on("click", self.dispatchWeights);
+
+        self.headingCenter.append("span")
+          .attr("class", "btn btn-default btn-xs")
+          .attr("disabled", parent.active_tab == "max-activations" ? "" : null)
+          .style(headingStyles)
+          .html("Max Activations")
+          .on("click",self.dispatchGetMaxActivations);
+
+        // On the right draw a close button
+        self.headingRight  = heading.append("div").attr("class", "col-xs-2 text-right");
+
+    };
+
     self.drawNav = function(range,n){
+        // Display links at bottom of panel to change range of shown outputs
+        if (_.isNull(range)) return;
         var step = range.max - range.min;
         var ul   = self.nav.html("").append("nav")
                     .append("ul").attr("class", "pagination");
@@ -217,42 +344,48 @@ LayerVisualizations.Panel = function(selector,props){
               });
 
         var h = self.nav.node().getBoundingClientRect().height;
+
         self.nav.style("margin-top", -1*h + "px");
     };
 
-    self.remove = function(){
-        parent.layer = null;
-        parent.overlay.remove();
-    };
+      self.dispatchWeights = function(){
+          parent.actions.getWeights(parent.layer.name);
+      };
 
-    self.render = function(msg, status){
-        var msg    = _.isUndefined(msg) ? "This layer contains no outputs" : msg;
-        var status = _.isUndefined(status) ? "warning" : status;
+      self.dispatchGetMaxActivations = function(){
+          parent.actions.getMaxActivations(parent.layer.name);
+      };
 
-        self.container.style("position","relative");
+      self.remove = function(){
+          parent.layer = null;
+          parent.overlay.remove();
+          parent.tasks.render();
+      };
 
-        self.outer = parent.overlay.inner.append("div").attr("class", "component-outer");
-        self.outer.style("padding", "30px");
+      self.render = function(msg, status){
+          var msg    = _.isUndefined(msg) ? "This layer contains no outputs" : msg;
+          var status = _.isUndefined(status) ? "warning" : status;
 
-        var panel   = self.outer.append("div").attr("class", "panel panel-default")
+          self.container.style("position","relative");
 
-        var heading = panel.append("div").attr("class", "panel-heading")
-          .append("div").attr("class","row").style("padding","0px 10px");
+          self.outer = parent.overlay.inner.append("div").attr("class", "component-outer");
+          self.outer.style("padding", "30px");
 
-        self.headingCenter = heading.append("div").attr("class", "text-center col-xs-offset-1 col-xs-10");
-        self.headingCenter.append("div").html(parent.layer.label + " (" + parent.layer.stats.shape + ")");
-        self.headingRight  = heading.append("div").attr("class", "col-xs-1 text-right");
+          var panel   = self.outer.append("div").attr("class", "panel panel-default");
 
-        var panelBody = panel.append("div").attr("class", "panel-content");
-        self.body = panelBody.append("div").attr("class", "outputs");
-        self.body.append("div")
-          .attr("class", "alert alert-"+status)
-          .style("margin","15px")
-          .html(msg);
-        self.nav = panelBody.append("div").attr("class", "panel-nav");
+          self.drawHeading(panel);
 
-        self.drawCloseButton();
-    };
+          var panelBody = panel.append("div").attr("class", "panel-content");
+
+          self.body = panelBody.append("div").attr("class", "outputs");
+          self.body.append("div")
+            .attr("class", "alert alert-"+status)
+            .style("margin","15px")
+            .html(msg);
+          self.nav = panelBody.append("div").attr("class", "panel-nav");
+
+          self.drawCloseButton();
+      };
 
     // Event Listeners:
     d3.select("body").on("keydown", function(){
@@ -286,6 +419,221 @@ LayerVisualizations.Overlay = function(selector,props){
 
     self.remove = function(){
         d3.selectAll(".loading-overlay").remove();
+    };
+
+};
+
+LayerVisualizations.Tasks = function(selector,props){
+    // Shows Active Running Tasks, last clicked layer, and last clicked unit
+
+    var self = this;
+    var parent = self.parent =
+      !_.isUndefined(props.parent) ? props.parent : props;
+
+    self.container = d3.select(selector).append("div");
+    self.progressButton = null;
+    self.layer = null;
+    self.unit = null;
+    self.tasks = new Array();
+    self.btn = null;
+    self.job_id = null;
+    self.isRunning = false;
+    self.addBtn    = {status: "primary", text: "Get Max Activations"};
+    self.abortBtn  = {status: "warning", text: "Abort Max Activations"};
+    self.removeBtn = {status: "danger", text: "Delete Max Activations"};
+
+    self.render = function(layer){
+        self.container.html('');
+        self.layer = _.isUndefined(layer) ? self.layer : layer;
+        self.drawActivationsButton();
+
+        self.drawTasks();
+        self.container.append("br");
+        if (!_.isNull(parent.layer)) self.drawLayerInfo();
+        if (!_.isNull(self.unit)) self.drawUnitInfo();
+
+    };
+
+    self.dispatchUnitClick = function(data,index){
+        self.unit = parent.range.min + index;
+        self.render(this.dataset.layer);
+    };
+
+    self.dispatchStopMaxActivations = function(){
+        parent.actions.stopMaxActivations(self.job_id);
+    };
+
+    self.dispatchRemoveMaxActivations = function(){
+        parent.actions.removeMaxActivations(parent.layer.name);
+    };
+
+    self.dispatchRunMaxActivations = function(){
+        self.isRunning = true;
+        parent.actions.postMaxActivations(parent.layer.name, [-1]);
+        self.tasks.push(new LayerVisualizations.Task(self,parent.layer.name));
+        self.render();
+    };
+
+    self.drawTasks = function(){
+        var container = self.container.append("div");
+        self.tasks.forEach(function(task){
+          task.render(container);
+        });
+    };
+
+    self.drawLayerInfo = function(){
+        self.container.append("i").text("Layer: ");
+        self.container.append("b").text(self.layer);
+        self.container.append("br");
+    };
+
+    self.drawActivationsButton = function(){
+      if (_.isNull(parent.layer) || parent.active_tab != "max-activations")
+        return;
+
+      var hasOutputs = _.includes(parent.outputs, true);
+
+      self.btn   = hasOutputs ? self.removeBtn : self.addBtn;
+      self.btn   = !self.isRunning ? self.btn  : self.abortBtn;
+
+      var action = hasOutputs ? self.dispatchRemoveMaxActivations : self.dispatchRunMaxActivations;
+
+      var btn = self.container.append("a")
+        .attr("class", "btn btn-"+self.btn.status)
+        .attr("data-style", "expand-left")
+        .style("width","100%")
+        .on("click", !self.isRunning ? action : self.dispatchStopMaxActivations);
+
+      btn.append("span").attr("class","ladda-label")
+          .text(self.btn.text);
+    };
+
+    self.drawUnitInfo = function(){
+        var hw = 180;
+
+        var params = $.param({
+          "job_id": parent.job_id,
+          "layer_name":self.layer,
+          "unit": self.unit,
+        });
+
+        var image_url = "/pretrained_models/max_activation?"+params;
+        self.container.append("i").text("Unit: ");
+        self.container.append("b").text(self.unit);
+        self.container.append("br");
+
+        var canvas = self.container.append("canvas");
+        canvas.attr(UnitHelpers.defaultAttributes(hw,hw));
+        canvas.style(UnitHelpers.defaultStyles(hw,hw));
+
+        UnitHelpers.drawUnitImage(image_url,canvas.node(),hw,false);
+    };
+
+    self.getTask = function(layer){
+        var task = _.last(self.tasks.filter(function(t){
+          return t.layer == layer;
+        }));
+
+        return task;
+    };
+
+    self.updateProgress = function(msg){
+        var task = self.getTask(msg.data.layer);
+        if (_.isUndefined(task)){
+          self.isRunning = true;
+          self.job_id    = msg.data.id;
+          self.tasks.push(new LayerVisualizations.Task(self,msg.data.layer));
+          self.render();
+          task = _.last(self.tasks);
+        }
+        task.progress = msg.data.progress;
+        self.unit = msg.data.unit -1;
+        self.render(msg.data.layer);
+        task.update();
+    };
+
+    self.maxActivationsStopped = function(){
+        var task = _.last(self.tasks.filter(function(t){
+          return t.layer == self.layer;
+        }));
+        task.complete("warning");
+    };
+
+    self.signalError = function(msg){
+        // Complete Task:
+        var task = self.getTask(msg.data.layer);
+        task.layer = task.layer+": "+msg.data.error;
+        task.complete("danger");
+
+        // Send error message to console:
+        console.error(msg.data.error);
+    };
+
+    self.taskCompleted = function(){
+        self.isRunning = false;
+        self.render();
+    };
+
+};
+
+LayerVisualizations.Task = function(parent,layer){
+    var parent = parent;
+    var self   = this;
+    self.layer = layer;
+    self.progress = 0;
+    self.btn = null;
+    self.btnObject = null;
+    self.status = "default";
+    self.container = null;
+
+    self.complete = function(status){
+        self.progress = 1;
+        self.btn.stop();
+        self.status = _.isUndefined(status) ? "success" : status;
+        self.drawButton();
+        parent.taskCompleted();
+    };
+
+    self.update = function(){
+        self.btn.setProgress(self.progress);
+        if (self.progress == 1) self.complete();
+        self.btnObject.attr("disabled", null);
+    };
+
+    self.layerClicked = function(e){
+        self.layer = e.layer;
+        self.range = {min: 0 , max: 2000};
+        self.dispatchInference();
+        self.tasks.render(e.layer.name);
+    };
+
+    self.dispatchLayerClicked = function(){
+        parent.parent.actions.getMaxActivations(self.layer);
+    };
+
+    self.drawButton = function(){
+        var btn = self.btnObject =
+          self.container.html('').append("a")
+            .attr("class", "btn btn-"+self.status+" ladda-button")
+            .style("margin-top","2px")
+            .style("width","100%")
+            .attr("data-style", "expand-left")
+            .attr("data-size","small")
+            .on("click",self.dispatchLayerClicked);
+
+        btn.append("span").attr("class","ladda-label")
+            .text(self.layer);
+
+        if (self.progress == 1) return;
+        self.btn = Ladda.create(btn.node());
+        self.btn.start();
+        self.btn.setProgress(self.progress);
+        self.btnObject.attr("disabled", null);
+    };
+
+    self.render = function(container){
+        self.container = container.append("div");
+        self.drawButton();
     };
 
 };

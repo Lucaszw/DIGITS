@@ -351,6 +351,7 @@ def normalize_data(data):
         data_min = np.amin(data)
         data_max = np.amax(data)
         data = (data - data_min) / (data_max - data_min)
+
     return data
 
 def reshape_data_for_vis(data,channel_order = 'RGB'):

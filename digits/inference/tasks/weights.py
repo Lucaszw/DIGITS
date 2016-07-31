@@ -99,7 +99,7 @@ class WeightsTask(Task):
                     namespace='/jobs',
                     room="job_management",
                     )
-
+            return True
         # path to weights data
         match = re.match(r'Saved data to (.*)', message)
         if match:

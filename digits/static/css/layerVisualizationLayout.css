@@ -89,7 +89,6 @@ body {
   background: rgba(255,255,255,0.9);
   position: absolute;
   padding: 0px 24px;
-  top: 100%;
   width:100%;
   overflow: hidden;
   z-index: 2;
@@ -122,8 +121,6 @@ body {
 .canvas-hover {
   margin-left: -25px !important;
   margin-top: -25px !important;
-  height: 60px !important;
-  width: 60px !important;
   position:relative !important;
   left: 12.5px;
   top: 12.5px;

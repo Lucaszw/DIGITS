@@ -30,7 +30,7 @@ Perform inference on a list of images using the specified model
 def get_weights(output_dir):
 
     f = h5py.File(os.path.join(output_dir,'filters.hdf5'),'w')
-    vis_file = h5py.File(output_dir+'/weights.h5','r')
+    vis_file = h5py.File(os.path.join(output_dir,'weights.h5'),'r')
 
     # Save param keys to file:
     num_outputs = len(vis_file['layers'].keys())

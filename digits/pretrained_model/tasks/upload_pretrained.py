@@ -13,7 +13,7 @@ class UploadPretrainedModelTask(Task):
     A task for uploading pretrained models
     """
 
-    def __init__(self, weights_path, model_def_path, labels_path=None, framework="caffe", **kwargs):
+    def __init__(self, **kwargs):
         """
         Arguments:
         weights_path -- path to model weights (**.caffemodel or ***.t7)
@@ -64,13 +64,10 @@ class UploadPretrainedModelTask(Task):
 
     def get_labels(self):
         labels = []
-<<<<<<< HEAD
+
         if os.path.isfile(self.get_labels_path()):
             with open(self.get_labels_path()) as f:
-=======
-        if self.labels_path is not None:
-            with open(self.job_dir+"/labels.txt") as f:
->>>>>>> Layer Visualizations And Weights for Caffe-Torch
+
                 labels = f.readlines()
         return labels
 
@@ -92,15 +89,14 @@ class UploadPretrainedModelTask(Task):
         """
         raise NotImplementedError('Please implement me')
 
-<<<<<<< HEAD
+
     def get_labels_path(self):
         return os.path.join(self.job_dir,"labels.txt")
 
     def get_mean_path(self):
         return os.path.join(self.job_dir,"mean.binaryproto")
 
-=======
->>>>>>> Layer Visualizations And Weights for Caffe-Torch
+
     def write_deploy(self):
         """
         Write model definition for deploy/visualization

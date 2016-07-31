@@ -1,5 +1,6 @@
 # Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
 import os
+import sys
 import subprocess
 import tempfile
 import PIL
@@ -9,7 +10,47 @@ from digits.config import load_config, config_value
 load_config()
 from digits import utils, log
 
-def save_weights(network_path,weights_path, logger=None):
+def save_max_activations(network_path,weights_path,height,width,layer,units=[-1],gpu=None,logger=None):
+    if config_value('torch_root') == '<PATHS>':
+        torch_bin = 'th'
+    else:
+        torch_bin = os.path.join(config_value('torch_root'), 'bin', 'th')
+
+    layer = layer.split('_')[-1]
+
+    args = [torch_bin,
+            os.path.join(os.path.dirname(os.path.dirname(digits.__file__)),'tools','torch','wrapper.lua'),
+            'gradientOptimizer.lua',
+            '--network=%s' % os.path.basename(network_path).split(".")[0],
+            '--weights=%s' % os.path.split(weights_path)[1],
+            '--networkDirectory=%s' % os.path.split(network_path)[0],
+            '--height=%s' % height,
+            '--width=%s' % width,
+            '--layer=%s' % layer,
+            '--units=%s' % (','.join(str(x) for x in units))
+            ]
+
+    # Convert them all to strings
+    args = [str(x) for x in args]
+
+    env = os.environ.copy()
+
+    if gpu is not None:
+        args.append('--type=cuda')
+        # make only the selected GPU visible
+        env['CUDA_VISIBLE_DEVICES'] = "%d" % gpu
+    else:
+        args.append('--type=float')
+
+    # Append units at end:
+    p = subprocess.Popen(args,
+            cwd=os.path.split(network_path)[0],
+            close_fds=True,
+            env=env
+            )
+    p.wait()
+
+def save_weights(network_path,weights_path, gpu=None, logger=None):
 
     if config_value('torch_root') == '<PATHS>':
         torch_bin = 'th'
@@ -23,11 +64,12 @@ def save_weights(network_path,weights_path, logger=None):
             '--networkDirectory=%s' % os.path.split(network_path)[0],
             '--snapshot=%s' % os.path.split(weights_path)[1],
             '--save=%s' % ".",
-            '--type=%s' % "float"
+             '--type=%s' % "float"
             ]
 
     # Convert them all to strings
     args = [str(x) for x in args]
+
     env = os.environ.copy()
 
     # stdout=subprocess.PIPE,
