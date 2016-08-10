@@ -49,8 +49,25 @@ class PretrainedModelJob(Job):
     def get_weights_path(self):
         return self.tasks[0].get_weights_path()
 
-    def get_model_def_path(self):
-        return self.tasks[0].get_model_def_path()
+    def get_model_def_path(self,as_json=False):
+        return self.tasks[0].get_model_def_path(as_json)
+
+    def get_deploy_path(self):
+        return self.tasks[0].get_deploy_path()
+
+    def get_filters_path(self):
+        return os.path.join(self.dir(),"filters.hdf5")
+
+    def get_model_def(self,as_json=False):
+        with open(self.get_model_def_path(as_json), 'r') as myfile:
+            data=myfile.read()
+        return data
+
+    def has_weights(self):
+        return os.path.isfile(self.get_filters_path()) and os.path.isfile(self.get_model_def_path(True))
+
+    def has_deploy(self):
+        return os.path.isfile(self.get_deploy_path())
 
     def get_deploy_path(self):
         return self.tasks[0].get_deploy_path()

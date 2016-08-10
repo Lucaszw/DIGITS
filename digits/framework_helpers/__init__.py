@@ -2,3 +2,4 @@
 from __future__ import absolute_import
 
 from . import caffe_helpers
+from . import torch_helpers

@@ -18,6 +18,7 @@ import scipy
 
 from .train import TrainTask
 import digits
+
 from digits import utils
 from digits.config import config_value
 from digits.status import Status
@@ -1147,7 +1148,6 @@ class CaffeTrainTask(TrainTask):
                 stats.update({
                     "caffe flavor": self.caffe_flavor,
                     "caffe version": self.caffe_version,
-                    "model file": self.model_file,
                     "digits version": self.digits_version
                 })
 

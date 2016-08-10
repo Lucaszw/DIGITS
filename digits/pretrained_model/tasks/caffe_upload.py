@@ -27,11 +27,14 @@ class CaffeUploadTask(UploadPretrainedModelTask):
         return 'Upload Pretrained Caffe Model'
 
     @override
-    def get_model_def_path(self):
+    def get_model_def_path(self,as_json=False):
         """
         Get path to model definition
         """
-        return os.path.join(self.job_dir,self.model_file)
+        if as_json == True:
+            return os.path.join(self.job_dir,"model_def.json")
+        else:
+            return os.path.join(self.job_dir,self.model_file)
 
     @override
     def get_weights_path(self):
@@ -54,7 +57,7 @@ class CaffeUploadTask(UploadPretrainedModelTask):
         model_def_path  = self.get_model_def_path()
         network = fw.get_network_from_path(model_def_path)
 
-        image_dim = [int(self.image_info["height"]), int(self.image_info["width"]),int(self.image_info["image_type"]) ]
+        image_dim = [ int(self.image_info["height"]), int(self.image_info["width"]), int(self.image_info["image_type"]) ]
 
         caffe_helpers.save_deploy_file_classification(network,self.job_dir,len(self.get_labels()),None,image_dim,None)
 

@@ -10,11 +10,11 @@ import flask
 import h5py
 import json
 import numpy as np
-import PIL.Image
-import StringIO
+
 import werkzeug.exceptions
 
 from digits import dataset, extensions, model, utils
+from digits.inference import WeightsJob
 from digits.pretrained_model import PretrainedModelJob
 
 from digits.utils.routing import request_wants_json, job_from_request
@@ -84,6 +84,76 @@ def validate_archive_keys(info):
 
     return (True, 0)
 
+def format_job_name(job):
+    return {"name": job.name(), "id": job.id()}
+
+@blueprint.route('/get_weights.json', methods=['GET'])
+def get_weights():
+    """ Return the weights for a given layer """
+    job = job_from_request()
+
+    args = flask.request.args
+    layer_name = args["layer_name"]
+    range_min  = int(args["range_min"])
+    range_max  = int(args["range_max"])
+    data   = []
+    stats  = {}
+    num_units = 0
+
+    # Open h5py file, and retrieve weights in specified range for given layer:
+    if os.path.isfile(job.get_filters_path()):
+        f = h5py.File(job.get_filters_path())
+        if layer_name in f:
+            num_units = len(f[layer_name])
+            stats = json.loads(f[layer_name].attrs["stats"])
+            data = f[layer_name][:][range_min:range_max].tolist()
+
+    return flask.jsonify({"data": data, "length": num_units, "stats": stats })
+
+@blueprint.route('/get_outputs.json', methods=['GET'])
+def get_outputs():
+    job  = scheduler.get_job(flask.request.args["job_id"])
+
+    # If older job, then create weights db file:
+    if not job.has_weights():
+        job.tasks[0].write_deploy()
+        weights_job = run_weights_job(job,utils.auth.get_username())
+        weights_job.wait_completion()
+        # If failed to create weights, recommend re-uploading:
+        status = weights_job.status.name
+        if status is "Error":
+            return flask.jsonify({"stats": status, "msg": "Could not generate weights, consider re-uploading job." })
+
+    layers_with_outputs = []
+    if os.path.isfile(job.get_filters_path()):
+        f = h5py.File(job.get_filters_path())
+        layers_with_outputs = f.keys()
+
+    return flask.jsonify({"model_def": job.get_model_def(True), "framework": job.framework, "layers_with_outputs": layers_with_outputs})
+
+@utils.auth.requires_login
+@blueprint.route('/layer_visualizations/<job_id>', methods=['GET'])
+def layer_visualizations(job_id):
+    job = scheduler.get_job(job_id)
+    if not job.has_deploy():
+        job.tasks[0].write_deploy()
+
+    return flask.render_template("pretrained_models/layer_visualizations.html",job=format_job_name(job))
+
+def run_weights_job(job,username):
+    """
+    Run Job To Retrieve Weights From Pretrained Model
+    """
+    # Get Weights:
+    weights_job = WeightsJob(
+        job,
+        name     = job.name() + " (getting weights)",
+        username = username
+    )
+
+    scheduler.add_job(weights_job)
+    return weights_job
+
 @utils.auth.requires_login
 @blueprint.route('/upload_archive', methods=['POST'])
 def upload_archive():
@@ -151,6 +221,8 @@ def upload_archive():
 
         scheduler.add_job(job)
 
+        run_weights_job(job, utils.auth.get_username())
+
         # Delete temp directory
         shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -207,5 +279,14 @@ def new():
         name = flask.request.form['job_name']
     )
     scheduler.add_job(job)
+
+    job.wait_completion()
+
+    weights_job = WeightsJob(
+        job,
+        name     = flask.request.form['job_name'],
+        username = utils.auth.get_username()
+    )
+    scheduler.add_job(weights_job)
 
     return flask.redirect(flask.url_for('digits.views.home', tab=3)), 302

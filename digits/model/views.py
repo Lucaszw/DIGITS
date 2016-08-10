@@ -17,6 +17,7 @@ import werkzeug.exceptions
 from . import images as model_images
 from . import ModelJob
 from digits.pretrained_model.job import PretrainedModelJob
+from digits.inference import WeightsJob
 from digits import frameworks, extensions
 from digits.utils import time_filters, auth
 from digits.utils.routing import request_wants_json
@@ -205,6 +206,7 @@ def create_pretrained_model(job_id,username,epoch):
     if "image resize mode" in info:
         resize_mode = info["image resize mode"]
 
+
     model_file = os.path.join(job.dir(),str(task.model_file))
 
     # If jobs don't container model_file (too old), raise exception:
@@ -241,7 +243,17 @@ def to_pretrained(job_id):
 
     username = auth.get_username()
 
-    create_pretrained_model(job_id,username,epoch)
+    job = create_pretrained_model(job_id,username,epoch)
+    job.wait_completion()
+
+    weights_job = WeightsJob(
+        job,
+        name     = info['name'],
+        username = auth.get_username()
+    )
+
+    scheduler.add_job(weights_job)
+
     return flask.redirect(flask.url_for('digits.views.home', tab=3)), 302
 
 @blueprint.route('/<job_id>/download',
