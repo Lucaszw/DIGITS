@@ -61,6 +61,7 @@ class TorchUploadTask(UploadPretrainedModelTask):
                 '--output=%s' % self.get_model_def_path(True),
                 ]
         env = os.environ.copy()
+
         p = subprocess.Popen(args,cwd=self.job_dir,env=env)
 
     @override
