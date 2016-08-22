@@ -50,11 +50,21 @@ end
 
 function nnhelpers.getNetworkUntilPushLayer(model,push_layer)
   -- Create a network starting from input layer to output layer:
+
+  -- Check to make sure they selected a valid layer:
+  if model:listModules()[push_layer].modules then
+    print(torch.type(model:listModules()[push_layer]) .. " selected.")
+    print("Please select a layer, not a container.")
+    os.exit()
+  end
+
   local chainedNetwork = nnhelpers._generateChainedNetwork(model)
+
+  push_layer = nnhelpers._findPushLayer(model,chainedNetwork,push_layer)
+
   local croppedNetwork = nil
   local layers = chainedNetwork:listModules()
   local containers = nnhelpers._getContainers(chainedNetwork:listModules())
-
   local mm = nn.Sequential()
   local c = containers[push_layer]
 
@@ -75,13 +85,26 @@ function nnhelpers.getNetworkUntilPushLayer(model,push_layer)
   return croppedNetwork
 end
 
+function nnhelpers.getNumOutputs(model,channels,h,w)
+  local input = torch.ones(1,channels,h,w)
+  local output = model:forward(input:cuda())
+  local size = 0
+  if output:nDimension() == 1 then
+    size = output:size()[1]
+  else
+    size = output[1]:size()[1]
+  end
+  model:clearState()
+  return size
+end
+
 function nnhelpers.generatePointGradient(model,input,unit,amplitude)
   -- Generates gradient to push back through the network
   output = model:forward(input)
-  diffs = torch.Tensor(output:size()) * 0
+  diffs = torch.zeros(output:size())
 
   if output:nDimension() == 4 and output:size()[3] > 1 then
-    p = {output:size()[3]/2,output:size()[4]/2}
+    p = {math.floor(output:size()[3]/2),math.floor(output:size()[4]/2)}
     diffs[1][unit][p[1]][p[2]] = amplitude
   elseif output:nDimension() == 4 then
     diffs[1][unit][1][1] = amplitude
@@ -102,14 +125,36 @@ end
 function nnhelpers.regularize(img,gradient,iteration,g,reg_params)
   -- Regularize:
   -- TODO: Add more regularization techniques
-  grad = torch.cmin(torch.cmax(reg_params.lr*gradient, - 1), 1)
-  img = torch.add(img:clone(),grad) * (1-reg_params.decay)
+
+  local grad = torch.cmin(torch.cmax(reg_params.lr*gradient, - 1), 1)
+  local img = torch.add(img:clone(),grad) * (1-reg_params.decay)
+
   if iteration % reg_params.blur_every == 0 then
     img[1] = image.convolve(img[1]:double(),g,'same'):cuda()
   end
+
   return img
 end
 
+function nnhelpers._findPushLayer(old_network,new_network,push_layer)
+  -- Find the index of push_layer after being moved to the main chain
+
+  -- Ensure outputs are cleared and set the output of push_layer to 1
+  old_network:clearState()
+  old_network:listModules()[push_layer].outputs = 1
+  local push_layer = 0
+  local layers = new_network:listModules()
+  -- Look through new network for a layer with outputs of 1
+  for i=1,#layers do
+    local layer = layers[i]
+    if layer.outputs == 1 then
+      push_layer = i
+      break
+    end
+  end
+
+  return push_layer
+end
 
 function nnhelpers._getContainers(layers)
   -- Get array of index values for parent containers
