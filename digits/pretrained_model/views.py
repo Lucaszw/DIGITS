@@ -200,7 +200,7 @@ def get_max_activations():
         f = h5py.File(job.get_filters_path(),'r')
         if layer_name in f:
             stats = json.loads(f[layer_name].attrs["stats"])
-            data = fill_empty(stats["num_activations"])
+            data = fill_empty(stats["shape"][0])
 
     return flask.jsonify({"stats": stats, "data": data[range_min:range_max], "length": len(data)})
 
