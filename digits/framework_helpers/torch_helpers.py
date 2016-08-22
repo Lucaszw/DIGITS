@@ -8,6 +8,46 @@ from digits.config import load_config, config_value
 load_config()
 from digits import utils, log
 
+def save_max_activations(network_path,weights_path,height,width,layer,units=[0],gpu=None,logger=None):
+    if config_value('torch_root') == '<PATHS>':
+        torch_bin = 'th'
+    else:
+        torch_bin = os.path.join(config_value('torch_root'), 'bin', 'th')
+
+    args = [torch_bin,
+            os.path.join(os.path.dirname(os.path.dirname(digits.__file__)),'tools','torch','wrapper.lua'),
+            'gradientOptimizer.lua',
+            '--network=%s' % os.path.basename(network_path).split(".")[0],
+            '--networkDirectory=%s' % os.path.split(network_path)[0],
+            '--weights=%s' % os.path.split(weights_path)[1],
+            '--save=%s' % ".",
+            '--height=%s' % height,
+            '--width=%s' % width,
+            '--layer=%s' % layer
+            ]
+
+    # Convert them all to strings
+    args = [str(x) for x in args]
+
+    if gpu is not None:
+        args.append('--type=cuda')
+        # make only the selected GPU visible
+        env['CUDA_VISIBLE_DEVICES'] = "%d" % gpu
+    else:
+        args.append('--type=float')
+
+    # Append units at end:
+    args.append(' '.join(str(x) for x in units))
+
+    env = os.environ.copy()
+
+    p = subprocess.Popen(args,
+            cwd=os.path.split(network_path)[0],
+            close_fds=True,
+            env=env
+            )
+    p.wait()
+
 def save_weights(network_path,weights_path, gpu=None, logger=None):
 
     if config_value('torch_root') == '<PATHS>':
@@ -28,13 +68,6 @@ def save_weights(network_path,weights_path, gpu=None, logger=None):
     args = [str(x) for x in args]
 
     env = os.environ.copy()
-
-    if gpu is not None:
-        args.append('--type=cuda')
-        # make only the selected GPU visible
-        env['CUDA_VISIBLE_DEVICES'] = "%d" % gpu
-    else:
-        args.append('--type=float')
 
     # stdout=subprocess.PIPE,
     # stderr=subprocess.STDOUT,
