@@ -8,7 +8,7 @@ require 'cudnn'
 require 'cunn'
 require 'image'
 require 'os'
-
+require 'pl'
 nnhelpers = {}
 
 
@@ -133,6 +133,35 @@ function nnhelpers.regularize(img,gradient,iteration,g,reg_params)
   end
 
   return img
+end
+
+function nnhelpers.findLayerFromChain(model,chain)
+  local containers = (chain):split('_')
+  local layer = model
+  local push_layer = 0
+  local p = 0
+
+  for i=2, #containers do
+    local p = p+tonumber(containers[i-1])
+    local c = tonumber(containers[i])
+    layer = layer:get(c-p)
+  end
+
+  model:clearState()
+  layer.outputs = 1
+
+  local layers = model:listModules()
+  for i=1,#layers do
+    local layer = layers[i]
+    if layer.outputs == 1 then
+      push_layer = i
+      break
+    end
+  end
+
+  layers[push_layer].outputs = nil
+
+  return push_layer
 end
 
 function nnhelpers._findPushLayer(old_network,new_network,push_layer)

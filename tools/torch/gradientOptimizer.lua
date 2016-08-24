@@ -27,7 +27,7 @@ opt = lapp[[
 -s,--save (default .) save directory
 --height (number)
 --width (number)
---layer (number)
+--chain (string)
 --units (string)
 ]]
 
@@ -35,10 +35,10 @@ local network_type = opt.type
 local network = opt.network
 local weights_filename = opt.weights
 local network_directiory = opt.networkDirectory
-local filename = paths.concat(opt.save, 'vis.h5')
+local filename = paths.concat(opt.save, 'max_activations.hdf5')
 
 -- GoogleNet (ImageNet) : 174, GoogLeNet(Cifar10) : 220, AlexNet(Cifar): 22
-local push_layer = opt.layer
+local chain = opt.chain
 local units = _.map((opt.units):split(','),function(i,u)return tonumber(u) end)
 
 -- PARAMS:
@@ -49,6 +49,7 @@ cutorch.setDevice(1)
 
 -- Load Network
 local model = nnhelpers.loadModel(network_directiory,network,weights_filename,network_type)
+local push_layer = nnhelpers.findLayerFromChain(model,chain)
 
 -- model = nnhelpers.loadModel('./AlexNet(Cifar)_Color', 'model', './AlexNet(Cifar)_Color/snapshot_13_Model.t7', 'cuda')
 -- model = nnhelpers.loadModel('./AlexNet(Cifar)_Grey', 'model', './AlexNet(Cifar)_Grey/snapshot_30_Model.t7', 'cuda')
@@ -74,8 +75,7 @@ local height  = opt.height
 local width  = opt.width
 
 local input_size = {1,channels,height,width}
-print("INPUT SIZE:")
-print(input_size)
+
 
 local mean_image = torch.ones(image.lena():size())*0.5
 
@@ -83,7 +83,7 @@ if channels == 1 then
   mean_image = 0.333 * torch.add(torch.add(mean_image[1],mean_image[2]),mean_image[3])
 end
 
-local max_db = hdf5.open("/home/lzeerwanklyn/Desktop/gradients.h5", 'w')
+
 local inputs = torch.Tensor(torch.LongStorage(input_size))
 local im = image.scale(mean_image,input_size[3],input_size[4])
 inputs[1] = im
@@ -119,7 +119,10 @@ for _,push_unit in ipairs(units) do
     -- Apply Regularizations:
     xx = nnhelpers.regularize(xx,gradInput,ii,g,reg_params)
     -- image.display{image=xx, win=w}
-    print(ii)
+
   end
-  max_db:write('/layers/'..chain..'/weights', weights:float())
+  xx = torch.cmin(torch.cmax(xx, 0),1)
+  local max_db = hdf5.open(filename, 'a')
+  max_db:write(chain .. "/" .. push_unit .. "/data", xx:float())
+  max_db:close()
 end

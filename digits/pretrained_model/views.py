@@ -139,12 +139,12 @@ def max_activation():
         f = h5py.File(max_activation_path,'r')
         if layer_name in f:
             if str(unit) in f[layer_name]:
-                raw_data = f[layer_name][str(unit)]['cropped'][:]
+                raw_data = 255*(f[layer_name][str(unit)]['data'][:][0][0])
         f.close()
-
+    print(raw_data.shape)
     # Add one channel for greyscale images:
-    if len(raw_data[0][0]) == 1:
-        raw_data = np.transpose(raw_data, (2,0,1))[0]
+    # if len(raw_data[0][0]) == 1:
+    #     raw_data = np.transpose(raw_data, (2,0,1))[0]
 
     img = PIL.Image.fromarray(np.uint8(raw_data))
     return serve_pil_image(img)
@@ -201,7 +201,7 @@ def get_max_activations():
         w = h5py.File(job.get_filters_path(),'r')
         if layer_name in w:
             stats = json.loads(w[layer_name].attrs["stats"])
-            total_units = stats["num_activations"]
+            total_units = stats["shape"][0]
             uncompleted_units = total_units - completed_units
 
             if uncompleted_units > 0:

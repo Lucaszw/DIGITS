@@ -16,8 +16,6 @@ def save_max_activations(network_path,weights_path,height,width,layer,units=[-1]
     else:
         torch_bin = os.path.join(config_value('torch_root'), 'bin', 'th')
 
-    layer = layer.split('_')[-1]
-
     args = [torch_bin,
             os.path.join(os.path.dirname(os.path.dirname(digits.__file__)),'tools','torch','wrapper.lua'),
             'gradientOptimizer.lua',
@@ -26,7 +24,7 @@ def save_max_activations(network_path,weights_path,height,width,layer,units=[-1]
             '--networkDirectory=%s' % os.path.split(network_path)[0],
             '--height=%s' % height,
             '--width=%s' % width,
-            '--layer=%s' % layer,
+            '--chain=%s' % layer,
             '--units=%s' % (','.join(str(x) for x in units))
             ]
 
@@ -71,9 +69,6 @@ def save_weights(network_path,weights_path, gpu=None, logger=None):
     args = [str(x) for x in args]
 
     env = os.environ.copy()
-
-    # stdout=subprocess.PIPE,
-    # stderr=subprocess.STDOUT,
 
     p = subprocess.Popen(args,
             cwd=os.path.split(network_path)[0],
