@@ -25,10 +25,12 @@ from urlparse import urlparse
 
 from digits.config import config_value
 from digits.pretrained_model import PretrainedModelJob
-import digits.webapp
-import digits.dataset.images.classification.test_views
+
 import digits.model.images.classification.test_views
+import digits.model.views
+import digits.pretrained_model.views
 import digits.test_views
+import digits.webapp
 
 # Must import after importing digit.config
 import caffe_pb2
@@ -36,6 +38,17 @@ import caffe_pb2
 # May be too short on a slow system
 TIMEOUT_DATASET = 45
 TIMEOUT_MODEL = 60
+
+class BaseViewsTestWithPretrainedModel(digits.model.images.classification.test_views.BaseViewsTestWithModel):
+    """
+    Provides a model
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(BaseViewsTestWithPretrainedModel, cls).setUpClass()
+        job = digits.model.views.create_pretrained_model(cls.model_id,None,-1)
+        cls.model_id = job.id()
+
 
 class BaseTestUpload(digits.model.images.classification.test_views.BaseViewsTestWithModel):
     """
@@ -111,6 +124,7 @@ class BaseTestUpload(digits.model.images.classification.test_views.BaseViewsTest
         tmp.close()
 
         assert rv.status_code == 200, 'POST failed with %s\n\n%s' % (rv.status_code, body)
+
 class TestCaffeUpload(BaseTestUpload):
     FRAMEWORK = 'caffe'
 
