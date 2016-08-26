@@ -1,114 +1,6 @@
 // Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
-var PretrainedModel = function(params){
-  var props = _.extend({
-    selector: "#pretrainedModelContent",
-    size: 600
-  },params);
+var PretrainedModel = function(params) {
 
-  var self = this;
-  var inputs = PretrainedModel.mixins;
-
-  self.actions = new PretrainedModel.Actions(self);
-  self.archive = new Object();
-
-  self.size      = props.size;
-  self.selector  = props.selector;
-
-  self.header            = null;
-  self.container         = null;
-  self.innerContainer    = null;
-  self.frameworkSelector = null;
-
-  self.frameworks = [
-    {text: "Caffe", value: "caffe"},
-    {text: "Torch", value: "torch"}
-  ];
-
-  self.resize_channels = [
-    {text: "Color", value: 3},
-    {text: "Grayscale", value: 1}
-  ];
-
-  self.resize_modes = [
-    {text:"Squash", value: "squash"},
-    {text: "Crop", value: "crop"},
-    {text: "Fill", value: "fill"},
-    {text: "Half Crop, Half Fill", value: "half_crop"}
-  ];
-
-  self.frameworkChanged = function(){
-    var nextFramework = self.frameworkSelector.property("value");
-    if (nextFramework ==  "torch"){
-      self.torchForm();
-    }else{
-      self.caffeForm();
-    }
-  };
-
-  self.newRow = function(){
-    return self.container.append("div").attr("class","row");
-  };
-
-  self.close = function(){
-    d3.select(self.selector).html('');
-    d3.select(".modalOuter").style("display","none");
-  };
-
-  self.render = function(){
-    // Render heading:
-    $("#pretrainedModelTab>a").click();
-    d3.select(self.selector).html('');
-    self.heading();
-
-    self.container = d3.select(self.selector).append("div")
-      .html('')
-      .style({
-        top:"-20px",
-        position: "relative",
-        padding: "10px " + self.size/10 +"px"
-      });
-
-    self.well();
-    var row = self.newRow();
-    inputs.field(row.append("div").attr("class","col-xs-6"),"text","Jobname", "job_name");
-
-    self.frameworkSelector = inputs.select(
-      row.append("div").attr("class","col-xs-6"),self.frameworks,"Framework","framework"
-    );
-    row = self.newRow();
-    row.style("border-radius", "5px 5px 0px 0px");
-    inputs.select(
-      row.append("div").attr("class","col-xs-6"),
-        self.resize_channels,"Image Type","image_type"
-    );
-
-    inputs.select(
-      row.append("div").attr("class","col-xs-6"),
-        self.resize_modes,"Resize Mode","resize_mode"
-    );
-
-    row = self.newRow();
-    row.style("border-radius", "0px 0px 5px 5px");
-    inputs.field(row.append("div").attr("class","col-xs-6"),"number","Height", "height").attr("value",224);
-    inputs.field(row.append("div").attr("class","col-xs-6"),"number","Width", "width").attr("value",224);
-
-    self.frameworkSelector.on("change", self.frameworkChanged);
-    self.innerContainer = self.container.append("div");
-    self.caffeForm();
-  };
-
-  self.dispatchUpload = function(){
-    var file = self.archive.input.node().files[0];
-    // var spinner = self.archive.button.select("span").text("")
-    //   .attr("class", "");
-    self.well({
-      text: "",
-      class: "glyphicon glyphicon-refresh glyphicon-spin"
-    });
-    self.actions.uploadArchive(file);
-  };
-
-  self.well = function(params){
     var props = _.extend({
         selector: "#pretrainedModelContent",
         size: 600
@@ -285,8 +177,8 @@ var PretrainedModel = function(params){
 
         inputs.file(self.innerContainer,"Weights (**.caffemodel)", "weights_file");
         inputs.file(self.innerContainer,"Model Definition (original.prototxt)", "model_def_file");
-        inputs.file(self.innerContainer,"Labels file: (labels.txt)", "labels_file");
-        inputs.file(self.innerContainer,"Mean file: (mean.binaryproto)", "mean_file");
+        inputs.file(self.innerContainer,"Optional Labels file: (labels.txt)", "labels_file");
+        inputs.file(self.innerContainer,"Optional Mean file: (mean.binaryproto)", "mean_file");
 
         self.innerContainer.append("button").attr({type: "submit",class: "btn btn-default"})
           .on("click",self.submit)
@@ -299,8 +191,8 @@ var PretrainedModel = function(params){
 
         inputs.file(self.innerContainer,"Weights (**.t7)", "weights_file");
         inputs.file(self.innerContainer,"Model Definition: (model.lua)", "model_def_file");
-        inputs.file(self.innerContainer,"Labels file: (Optional)", "labels_file");
-        inputs.file(self.innerContainer,"Mean file: (mean.binaryproto)", "mean_file");
+        inputs.file(self.innerContainer,"Optional Labels file: (labels.txt)", "labels_file");
+        inputs.file(self.innerContainer,"Optional Mean file: (mean.binaryproto)", "mean_file");
 
         self.innerContainer.append("button").attr({type: "submit",class: "btn btn-default"})
           .on("click",self.submit)
@@ -382,7 +274,7 @@ PretrainedModel.mixins = {
       var btn   = group.append("span").attr("class", "input-group-btn")
         .append("span")
           .attr("class","btn btn-default btn-file")
-          .style({width: "205px", background: "whitesmoke"});
+          .style({width: "235px", background: "whitesmoke"});
       btn.append("span").style("font-size", "12px").text(label);
       var input = btn.append("input").attr({type: "file", name: name})
 

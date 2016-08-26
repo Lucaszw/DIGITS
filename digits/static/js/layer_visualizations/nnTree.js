@@ -34,8 +34,6 @@ function generateNNTree(model_def,framework){
 
 
     });
-    console.log(blobs.concat(layers));
-    console.log(links);
     window.graph = {nodes: blobs.concat(layers) , links: links};
 }
 
@@ -55,8 +53,7 @@ function loadNNTree(selector){
       rankdir: "TB",
       ranksep: 50,
       edgesep: 1,
-      nodesep: 10,
-      multirank: true
+      nodesep: 10
     });
 
     // Automatically label each of the nodes
