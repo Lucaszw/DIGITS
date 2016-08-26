@@ -5,10 +5,14 @@
 {% extends "layout.html" %}
 
 {% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/ladda-themeless.min.css', ver=dir_hash) }}">
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/layerVisualizationLayout.css', ver=dir_hash) }}">
 <script src="{{ url_for('static', filename='js/chroma.min.js', ver=dir_hash) }}" ></script>
+<script src="{{ url_for('static', filename='js/spin.min.js', ver=dir_hash) }}" ></script>
+<script src="{{ url_for('static', filename='js/ladda.min.js', ver=dir_hash) }}" ></script>
 <script src="{{ url_for('static', filename='js/pretrained_models/LayerVisualizations.js', ver=dir_hash) }}" ></script>
 <script src="{{ url_for('static', filename='js/layer_visualizations/dagre-d3.min.js', ver=dir_hash) }}" ></script>
+<script src="{{ url_for('static', filename='js/layer_visualizations/unitHelpers.js', ver=dir_hash) }}" ></script>
 <script src="{{ url_for('static', filename='js/layer_visualizations/nnTree.js', ver=dir_hash) }}" ></script>
 
 {% with namespace = "/jobs" %}

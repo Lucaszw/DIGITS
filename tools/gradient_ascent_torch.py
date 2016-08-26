@@ -25,7 +25,7 @@ logger = logging.getLogger('digits.tools.inference')
 """
 Get max activations from a pretrained model
 """
-def run(model_def_path, weights_path, height, width, layer,units=[0], gpu=None):
+def run(model_def_path, weights_path, height, width, layer,units=[0], mean_file_path=None,gpu=None):
 
     torch_helpers.save_max_activations(
         model_def_path,
@@ -33,6 +33,7 @@ def run(model_def_path, weights_path, height, width, layer,units=[0], gpu=None):
         height,width,
         layer,
         units,
+        mean_file_path,
         gpu,
         logger
         )
@@ -65,9 +66,12 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--layer',
             help='Name of output layer',
             )
+    parser.add_argument('-m', '--mean_file_path',
+            help='Mean file',
+            )
     parser.add_argument('-u', '--units',
             type=str,
-            default="0",
+            default="-1",
             help='Index of units to optimize in output layer',
             )
 
@@ -88,6 +92,7 @@ if __name__ == '__main__':
             args['width'],
             args['layer'],
             map(int,str.split(args['units'],",")),
+            args['mean_file_path'],
             args['gpu']
             )
     except Exception as e:

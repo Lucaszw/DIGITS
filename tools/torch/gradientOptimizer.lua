@@ -25,6 +25,7 @@ opt = lapp[[
 --weights (string) model weights to load
 --networkDirectory (default '') directory in which network exists
 -s,--save (default .) save directory
+--mean_file_path (default '') directory in which network exists
 --height (number)
 --width (number)
 --chain (string)
@@ -123,6 +124,6 @@ for _,push_unit in ipairs(units) do
   end
   xx = torch.cmin(torch.cmax(xx, 0),1)
   local max_db = hdf5.open(filename, 'a')
-  max_db:write(chain .. "/" .. push_unit .. "/data", xx:float())
+  max_db:write(chain .. "/" .. push_unit .. "/cropped", xx:float())
   max_db:close()
 end

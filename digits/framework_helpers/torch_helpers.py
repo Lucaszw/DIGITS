@@ -10,7 +10,7 @@ from digits.config import load_config, config_value
 load_config()
 from digits import utils, log
 
-def save_max_activations(network_path,weights_path,height,width,layer,units=[-1],gpu=None,logger=None):
+def save_max_activations(network_path,weights_path,height,width,layer,units=[-1],mean_file_path=None,gpu=None,logger=None):
     if config_value('torch_root') == '<PATHS>':
         torch_bin = 'th'
     else:
@@ -32,6 +32,9 @@ def save_max_activations(network_path,weights_path,height,width,layer,units=[-1]
     args = [str(x) for x in args]
 
     env = os.environ.copy()
+
+    if mean_file_path is not None:
+        args.append('--mean_file_path=%s' % mean_file_path)
 
     if gpu is not None:
         args.append('--type=cuda')

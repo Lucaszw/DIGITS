@@ -3,11 +3,17 @@ function generateNNTree(model_def,framework){
     var data = JSON.parse(model_def);
     window.graph = JSON.parse(model_def);
     if (framework == "torch"){return;}
+    var blobs_names = _.map(data.layer, function(l){return l.top[0]});
 
     var layers = _.isUndefined(data.layer) ? data.layers : data.layer;
-
     var links = new Array();
-    layers.forEach(function(layer,index){
+    var blobs_names = data.input.concat(_.uniq(_.map(layers, function(l){return l.top[0]})));
+    var blobs = _.map(blobs_names, function(n,i){return {name: n, type: "blob", index: i}});
+    var offset = blobs.length;
+
+
+    layers.forEach(function(layer,i){
+        var index = i + offset;
         layer.index = index;
 
         // Flatten object:
@@ -16,18 +22,21 @@ function generateNNTree(model_def,framework){
         var obj = _.pick(_.object(keys,vals), _.isFinite);
         _.extend(layer,obj);
 
-        var targets = _.filter(layers,function(l){return _.contains(l.bottom,layer.top[0])});
-        targets.forEach(function(target){
-            var source = layer;
-            var sourceTops = _.filter(layers, function(ll){ return ll.name == source.top[0] });
-            // console.log(sourceTops);
-            if (source.top[0] != source.name && sourceTops != 0) return
-            links.push({source: source, target: target});
+        layer.bottom.forEach(function(bottom){
+          var source = _.filter(blobs, function(b){return b.name == bottom})[0];
+          links.push({source: source, target: layer});
         });
 
-    });
+        layer.top.forEach(function(top){
+          var target = _.filter(blobs, function(b){return b.name == top})[0];
+          links.push({source: layer, target: target});
+        });
 
-    window.graph = {nodes: layers, links: links};
+
+    });
+    console.log(blobs.concat(layers));
+    console.log(links);
+    window.graph = {nodes: blobs.concat(layers) , links: links};
 }
 
 function loadNNTree(selector){
@@ -35,7 +44,7 @@ function loadNNTree(selector){
     // size of the diagram
     var viewerWidth = 10000000;
     var viewerHeight = 10000;
-    var COLORS = ["#72bee3","#f47a81","#71cdbd","#f89532","#c98fc4","#729acb","#a4de5c","#dfc000","#ed8cc3","#a084ff", "#7CD598", "#82C2FF", "#E7E84F", "#5173BD", "#DE8277","#DD3F4E","#FEE469","#CFC98D"];
+    var COLORS = ["#e0e0e0", "#72bee3","#f47a81","#71cdbd","#f89532","#c98fc4","#729acb","#a4de5c","#dfc000","#ed8cc3","#a084ff", "#7CD598", "#82C2FF", "#E7E84F", "#5173BD", "#DE8277","#DD3F4E","#FEE469","#CFC98D"];
     var types  = _.uniq(_.pluck(graph.nodes, "type"));
     var svg = d3.select(selector).html('').append("svg")
         .attr("width", viewerWidth)
@@ -44,26 +53,35 @@ function loadNNTree(selector){
     // Create a new directed graph
     window.g = new dagreD3.graphlib.Graph().setGraph({
       rankdir: "TB",
-      ranksep: "100"
+      ranksep: 70,
+      edgesep: 100,
+      nodesep: 100,
+
     });
 
     // Automatically label each of the nodes
     graph.nodes.forEach(function(n,i){
       var hasName = !_.isUndefined(n.name);
-
-      g.setNode(n.index, {
+      var type = (n.type == "blob") ? "" : n.type;
+      g.setNode(n.index, _.extend({
         name: hasName ? n.name : n.chain,
-        label: (hasName ? n.name+"\n" : "")+n.type,
-        style: "fill: "+ COLORS[types.indexOf(n.type)]
-      })
+        label: (hasName ? n.name+"\n" : "")+type,
+        style: "fill: "+ COLORS[types.indexOf(n.type)],
+        shape: (n.type == "blob") ? "ellipse" : "rect"
+      },
+      (n.type == "blob") ? {width: 150} : {}));
     });
 
     // states.forEach(function(state) { g.setNode(state, { label: "BLAH" }); });
     // Set up the edges
     graph.links.forEach(function(e){
+      var num_sources = _.isUndefined(e.target.bottom) ? 1 : e.target.bottom.length;
+
       g.setEdge(e.source.index, e.target.index,{
         label: "",
-        style: "fill: none; stroke: "+COLORS[types.indexOf(e.target.type)]
+        style: "fill: none; stroke: "+COLORS[types.indexOf(e.target.type)],
+        lineInterpolate: "basis",
+        minLen: num_sources > 1 ? 2 : 1
       })
     });
 
