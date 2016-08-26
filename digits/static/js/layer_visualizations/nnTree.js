@@ -53,10 +53,10 @@ function loadNNTree(selector){
     // Create a new directed graph
     window.g = new dagreD3.graphlib.Graph().setGraph({
       rankdir: "TB",
-      ranksep: 70,
-      edgesep: 100,
-      nodesep: 100,
-
+      ranksep: 50,
+      edgesep: 1,
+      nodesep: 10,
+      multirank: true
     });
 
     // Automatically label each of the nodes
