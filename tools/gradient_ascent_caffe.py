@@ -207,7 +207,7 @@ def infer(output_dir,model_def_path, weights_path, layer,units, mean_file_path=N
             if full_name in f:
                 del f[full_name]
 
-            f.create_dataset(cropped_name, data=np.uint8(256*cropped),dtype='i8')
+            f.create_dataset(cropped_name, data=np.transpose(np.uint8(256*cropped),(2,0,1)),dtype='i8')
             # f.create_dataset(full_name, data=np.uint8(256*im),dtype='i8')
             f.close()
         logger.info('Processed %s/%s units', i+1, len(units))

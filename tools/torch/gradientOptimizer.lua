@@ -43,13 +43,18 @@ local chain = opt.chain
 local units = _.map((opt.units):split(','),function(i,u)return tonumber(u) end)
 
 -- PARAMS:
+-- TODO: Have a set of parameters available to choose from in UI
+-- Perhaps bestGoogLeNet,bestAlexNet, and bestLeNet
 local reg_params = nnhelpers.bestAlexNet()
 local max_iter = 400
 
 cutorch.setDevice(1)
 
 -- Load Network
-local model = nnhelpers.loadModel(network_directiory,network,weights_filename,network_type)
+local net = nnhelpers.loadNetwork(network_directiory,network,weights_filename,network_type)
+local model = net.model
+local size = net.croplen
+
 local push_layer = nnhelpers.findLayerFromChain(model,chain)
 
 -- model = nnhelpers.loadModel('./AlexNet(Cifar)_Color', 'model', './AlexNet(Cifar)_Color/snapshot_13_Model.t7', 'cuda')
@@ -103,7 +108,7 @@ end
 -- Run Optimization:
 g = nnhelpers.gaussianKernel(reg_params.blur_radius)
 
-for _,push_unit in ipairs(units) do
+for i,push_unit in ipairs(units) do
   local mean = inputs:clone():cuda()
   local xx   = inputs:clone():cuda()
   local diffs = nnhelpers.generatePointGradient(mm,xx,push_unit,reg_params.push_spatial):cuda()
@@ -111,7 +116,7 @@ for _,push_unit in ipairs(units) do
   for ii=1,max_iter do
 
     -- Run Forward with new image:
-    xx = torch.cmin(torch.cmax(xx+mean, 0),1)-mean
+    xx = torch.cmin(torch.cmax(xx, 0),1)
     mm:forward(xx)
 
     -- Run backward:
@@ -122,8 +127,11 @@ for _,push_unit in ipairs(units) do
     -- image.display{image=xx, win=w}
 
   end
-  xx = torch.cmin(torch.cmax(xx, 0),1)
+
+  logmessage.display(0, 'Processed ' .. i .. '/' .. #units .. ' units')
+
+  xx = (255*torch.cmin(torch.cmax(xx, 0),1)):int()
   local max_db = hdf5.open(filename, 'a')
-  max_db:write(chain .. "/" .. push_unit .. "/cropped", xx:float())
+  max_db:write(chain .. "/" .. push_unit-1 .. "/cropped", xx[1] )
   max_db:close()
 end

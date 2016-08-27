@@ -128,36 +128,20 @@ def serve_pil_image(pil_img):
 @blueprint.route('/max_activation', methods=['GET'])
 def max_activation():
 
-    # max_activation_path = job.get_max_activations_path()
-    # if os.path.isfile(max_activation_path):
-    #     f = h5py.File(max_activation_path,'r')
-    #     if layer_name in f:
-    #         if str(unit) in f[layer_name]:
-    #             raw_data = 255*(f[layer_name][str(unit)]['data'][:][0][0])
-    #     f.close()
-    # print(raw_data.shape)
-    # # Add one channel for greyscale images:
-    # # if len(raw_data[0][0]) == 1:
-    # #     raw_data = np.transpose(raw_data, (2,0,1))[0]
-    #
-    # img = PIL.Image.fromarray(np.uint8(raw_data))
-    # return serve_pil_image(img)
     args = flask.request.args
     job = job_from_request()
     layer_name = args["layer_name"]
     unit       = args["unit"]
 
-    raw_data = 128*np.ones((256,256))
+    raw_data = 128*np.ones((256,256)).astype(int)
 
     max_activation_path = job.get_max_activations_path()
     if os.path.isfile(max_activation_path):
         f = h5py.File(max_activation_path,'r')
         if layer_name in f:
             if str(unit) in f[layer_name]:
-                raw_data = f[layer_name][str(unit)]['cropped'][:]
+                raw_data = np.transpose(f[layer_name][str(unit)]['cropped'][:],(1,2,0))
         f.close()
-
-    print(raw_data.shape)
     # Add one channel for greyscale images:
     if len(raw_data[0][0]) == 1:
         raw_data = np.transpose(raw_data, (2,0,1))[0]

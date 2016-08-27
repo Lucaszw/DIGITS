@@ -16,7 +16,7 @@ function nnhelpers.bestGoogLeNet()
   return {push_spatial=0.8,lr=1,decay=0.001,blur_every=4,blur_radius=1}
 end
 function nnhelpers.bestAlexNet()
-  return {push_spatial=1,lr=1000,decay=0.001,blur_every=4,blur_radius=1}
+  return {push_spatial=1,lr=500,decay=0.001,blur_every=4,blur_radius=1}
 end
 
 function nnhelpers.loadNetwork(dir,name, weightsFile, tensorType)
@@ -40,11 +40,6 @@ function nnhelpers.loadNetwork(dir,name, weightsFile, tensorType)
   model:cuda()
 
   return network
-end
-
-function nnhelpers.loadModel(dir,name, weightsFile, tensorType)
-  network = nnhelpers.loadNetwork(dir,name, weightsFile, tensorType)
-  return network.model
 end
 
 function nnhelpers.getNetworkUntilPushLayer(model,push_layer)
@@ -168,14 +163,13 @@ function nnhelpers._findPushLayer(old_network,new_network,push_layer)
   -- Find the index of push_layer after being moved to the main chain
 
   -- Ensure outputs are cleared and set the output of push_layer to 1
-  old_network:clearState()
-  old_network:listModules()[push_layer].outputs = 1
+  old_network:listModules()[push_layer].is_push_layer = true
   local push_layer = 0
   local layers = new_network:listModules()
   -- Look through new network for a layer with outputs of 1
   for i=1,#layers do
     local layer = layers[i]
-    if layer.outputs == 1 then
+    if layer.is_push_layer then
       push_layer = i
       break
     end
